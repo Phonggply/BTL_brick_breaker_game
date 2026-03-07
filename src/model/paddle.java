@@ -1,5 +1,5 @@
 package BTL_java.src.model;
 
-public class paddle {
+public class Paddle {
     
 }
