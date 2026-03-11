@@ -1,4 +1,4 @@
-package BTL_java.src.controller;
+package BTL_brick_breaker_game.src.controller;
 
 public class GameController {
     
