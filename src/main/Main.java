@@ -1,4 +1,4 @@
-package BTL_java.src.main;
+package BTL_brick_breaker_game.src.main;
 
 public class Main {
     
