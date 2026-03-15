@@ -73,6 +73,11 @@ public class GamePanel extends JPanel implements Runnable {
         int paddleWidth = (int)(width * 0.15);
         int paddleHeight = (int)(height * 0.03);
         int powerUpSize = (int)(width * 0.03);
-        
+        // vẽ ball
+        g2.setColor(Color.WHITE);
+        g2.fillOval(gameController.getBall().getX(), gameController.getBall().getY(), ballSize, ballSize);
+        // vẽ paddle
+        g2.setColor(Color.BLUE);
+        g2.fillRect(gameController.getPaddle().getX(), gameController.getPaddle().getY(), paddleWidth, paddleHeight);
     }
 }

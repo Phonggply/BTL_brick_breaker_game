@@ -2,7 +2,7 @@ package BTL_brick_breaker_game.src.model;
 
 public class Level {
 
-    private brick[][] bricks;
+    private Brick[][] bricks;
     private int rows;
     private int cols;
     private int remainingBricks;
@@ -12,7 +12,7 @@ public class Level {
         rows = 5;
         cols = 8;
 
-        bricks = new brick[rows][cols];
+        bricks = new Brick[rows][cols];
 
         initLevel();
     }
@@ -24,14 +24,14 @@ public class Level {
         for(int r = 0; r < rows; r++){
             for(int c = 0; c < cols; c++){
 
-                bricks[r][c] = new brick(c * 80, r * 30,80,30);
+                bricks[r][c] = new Brick(c * 80, r * 30,80,30);
 
                 remainingBricks++;
             }
         }
     }
 
-    public brick[][] getBricks(){
+    public Brick[][] getBricks(){
         return bricks;
     }
 
