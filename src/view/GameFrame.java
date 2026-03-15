@@ -1,22 +1,28 @@
 package BTL_brick_breaker_game.src.view;
+
 import javax.swing.JFrame;
 
 public class GameFrame extends JFrame {
-    public GameFrame(){
+
+    public GameFrame() {
 
         setTitle("Brick Breaker");
-
-        setSize(800, 600);
-
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        setLocationRelativeTo(null);
+        // kích thước ban đầu
+        setSize(1000, 700);
 
-        setResizable(false);
+        // mở fullscreen dạng window (giống Chrome, VS Code)
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // cho phép resize
+        setResizable(true);
+
+        // căn giữa
+        setLocationRelativeTo(null);
 
         add(new GamePanel());
 
         setVisible(true);
     }
 }
-

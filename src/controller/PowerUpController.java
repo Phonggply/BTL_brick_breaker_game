@@ -60,7 +60,6 @@ public class PowerUpController {
 
             case MULTI_BALL:
                 paddle.spawnMultiBall();
-                // spawn thêm bóng
                 break;
 
             case SHIELD:
