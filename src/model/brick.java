@@ -1,5 +1,5 @@
 package BTL_brick_breaker_game.src.model;
 
-public class brick {
+public class Brick {
     
 }
