@@ -1,5 +1,7 @@
 package BTL_brick_breaker_game.src.model;
 
+import java.awt.Rectangle;
+
  public class Ball {   
     private int x;
     private int y;
