@@ -1,4 +1,4 @@
-package BTL_java.src.dao;
+package BTL_brick_breaker_game.src.dao;
 
 public class DBConnection {
     

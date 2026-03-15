@@ -1,4 +1,4 @@
-package BTL_java.src.model;
+package BTL_brick_breaker_game.src.model;
 
 public class Brick {
     
