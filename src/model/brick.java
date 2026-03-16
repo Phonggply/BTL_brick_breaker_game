@@ -1,7 +1,5 @@
 package BTL_brick_breaker_game.src.model;
 
-package BTL_java.src.model;
-
 import java.awt.Rectangle;
 
 public class Brick {
