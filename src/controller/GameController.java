@@ -62,7 +62,7 @@ public class GameController {
                         brick.destroy();
                         b.reverseY();
                         level.brickDestroyed();
-                        return;
+                        break;
                     }
                 }
             }
