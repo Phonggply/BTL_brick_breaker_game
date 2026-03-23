@@ -24,7 +24,7 @@ public class Level {
         for(int r = 0; r < rows; r++){
             for(int c = 0; c < cols; c++){
 
-                bricks[r][c] = new Brick(c * 80, r * 30);
+                bricks[r][c] = new Brick(c * 80, r * 30,80,30);
 
                 remainingBricks++;
             }
