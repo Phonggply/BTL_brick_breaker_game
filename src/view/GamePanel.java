@@ -1,11 +1,13 @@
 package BTL_brick_breaker_game.src.view;
 
+import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Color;
 import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
+import java.awt.Image;
 import BTL_brick_breaker_game.src.model.Ball;
 import BTL_brick_breaker_game.src.model.Paddle;
 import BTL_brick_breaker_game.src.model.Brick;
@@ -39,6 +41,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     }
 
+    
+
     @Override
     public void run() {
 
@@ -64,13 +68,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         super.paintComponent(g);
 
         Graphics2D g2 = (Graphics2D) g;
-
+        Image bg = new ImageIcon(
+            getClass().getClassLoader().getResource("assets/game_play_background.png")
+        ).getImage();
+        g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
         int width = getWidth();
         int height = getHeight();
 
         draw(g2, width, height);
 
+        
     }
+
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
@@ -91,8 +100,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     private void draw(Graphics2D g2, int width, int height){
 
-        // sau này vẽ object ở đây
-        // ví dụ ball, paddle, brick...
+
         Ball ball = gameController.getBall();
         if(ball != null){
             g2.setColor(Color.WHITE);

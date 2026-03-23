@@ -7,13 +7,23 @@ import java.io.InputStream;
 public class Menu extends JPanel {
 
     private GameFrame frame;
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
 
+        Image bg = new ImageIcon(
+            getClass().getClassLoader().getResource("assets/menubg.png")
+        ).getImage();
+
+        g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+    }
     public Menu(GameFrame frame) {
         this.frame = frame;
 
         setLayout(null);
         setBackground(Color.BLACK);
 
+    
         // ===== LOAD FONT =====
         Font titleFont = loadFont(30f);
         Font buttonFont = loadFont(15f);
@@ -76,4 +86,5 @@ public class Menu extends JPanel {
             }
         });
     }
+    
 }
