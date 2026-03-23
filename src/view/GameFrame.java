@@ -3,6 +3,8 @@ package BTL_brick_breaker_game.src.view;
 import javax.swing.JFrame;
 
 public class GameFrame extends JFrame {
+    private Menu menuPanel;
+    private GamePanel gamePanel;
 
     public GameFrame() {
 
@@ -20,9 +22,21 @@ public class GameFrame extends JFrame {
 
         // căn giữa
         setLocationRelativeTo(null);
-
-        add(new GamePanel());
+        menuPanel = new Menu(this);
+        add(menuPanel);
 
         setVisible(true);
+    }
+    public void showGame() {
+
+        remove(menuPanel);
+
+        gamePanel = new GamePanel();
+        add(gamePanel);
+
+        revalidate();
+        repaint();
+
+        gamePanel.requestFocusInWindow();
     }
 }

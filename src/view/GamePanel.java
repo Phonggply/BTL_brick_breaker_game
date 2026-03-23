@@ -4,10 +4,16 @@ import javax.swing.JPanel;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Color;
+import java.awt.event.KeyListener;
+import java.awt.event.KeyEvent;
+import BTL_brick_breaker_game.src.model.Ball;
+import BTL_brick_breaker_game.src.model.Paddle;
+import BTL_brick_breaker_game.src.model.Brick;
+import BTL_brick_breaker_game.src.model.Level;
 
 import BTL_brick_breaker_game.src.controller.GameController;
 
-public class GamePanel extends JPanel implements Runnable {
+public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     private GameController gameController;
 
@@ -20,7 +26,8 @@ public class GamePanel extends JPanel implements Runnable {
         setFocusable(true);
 
         gameController = new GameController();
-
+        addKeyListener(this);        
+        requestFocusInWindow();  
         startGame();
     }
 
@@ -64,20 +71,64 @@ public class GamePanel extends JPanel implements Runnable {
         draw(g2, width, height);
 
     }
+    @Override
+    public void keyPressed(KeyEvent e) {
+        int key = e.getKeyCode();
+
+        if(key == KeyEvent.VK_LEFT){
+            gameController.getPaddle().moveLeft();
+        }
+        if(key == KeyEvent.VK_RIGHT){
+            gameController.getPaddle().moveRight(getWidth());
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {}
+
+    @Override
+    public void keyTyped(KeyEvent e) {}
 
     private void draw(Graphics2D g2, int width, int height){
 
         // sau này vẽ object ở đây
         // ví dụ ball, paddle, brick...
-        int ballSize = (int)(width * 0.02);
-        int paddleWidth = (int)(width * 0.15);
-        int paddleHeight = (int)(height * 0.03);
-        int powerUpSize = (int)(width * 0.03);
-        // vẽ ball
-        g2.setColor(Color.WHITE);
-        g2.fillOval(gameController.getBall().getX(), gameController.getBall().getY(), ballSize, ballSize);
-        // vẽ paddle
-        g2.setColor(Color.BLUE);
-        g2.fillRect(gameController.getPaddle().getX(), gameController.getPaddle().getY(), paddleWidth, paddleHeight);
+        Ball ball = gameController.getBall();
+        if(ball != null){
+            g2.setColor(Color.WHITE);
+            g2.fillOval(
+                ball.getX(),
+                ball.getY(),
+                ball.getSize(),
+                ball.getSize()
+            );
+        }
+        Paddle paddle = gameController.getPaddle();
+        if(paddle != null){
+            g2.setColor(Color.BLUE);
+            g2.fillRect(
+                paddle.getX(),
+                paddle.getY(),
+                paddle.getWidth(),
+                paddle.getHeight()
+            );
+        }
+        Level level = gameController.getLevel();
+        if(level != null){
+            g2.setColor(Color.RED);
+
+            for (Brick[] row : level.getBricks()) {
+                for (Brick brick : row) {
+                    if (brick != null && !brick.isDestroyed()) {
+                        g2.fillRect(
+                            brick.getX(),
+                            brick.getY(),
+                            brick.getWidth(),
+                            brick.getHeight()
+                        );
+                    }
+                }
+            }
+        }
     }
 }

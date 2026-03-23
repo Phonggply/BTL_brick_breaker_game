@@ -25,6 +25,9 @@ import java.awt.Rectangle;
     public void reverseX () {
         xDir = -xDir;
     }
+    public void setXDir(int xDir){
+        this.xDir = xDir;
+    }
     public void reverseY () {
         yDir = -yDir;
     }
