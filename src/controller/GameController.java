@@ -75,21 +75,21 @@ public class GameController {
 
             if(b.getBounds().intersects(paddle.getBounds())){
 
-                b.reverseY();
+                b.setPosition(b.getX(), paddle.getY() - b.getSize());
 
-                int paddleCenter = paddle.getX() + paddle.getWidth() / 2;
-                int ballCenter = b.getX() + b.getSize() / 2;
+            int paddleWidth = paddle.getWidth();
+            int section = paddleWidth / 5;
 
-                int offset = ballCenter - paddleCenter;
+            int ballCenter = b.getX() + b.getSize() / 2;
+            int relativeX = ballCenter - paddle.getX();
 
-                b.reverseX();
+            int region = relativeX / section;
 
-                if(offset < -10){
-                    b.reverseX();
-                }
-                else if(offset > 10){
-                    b.reverseX();
-                }
+            if (region < 0) region = 0;
+            if (region > 4) region = 4;
+
+            b.handlePaddleCollision(region);
+            
             }
         }
     }

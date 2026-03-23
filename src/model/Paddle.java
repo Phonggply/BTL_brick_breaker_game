@@ -10,6 +10,9 @@ public class Paddle {
     private int height;
     private int speed;
 
+    // shield
+    private boolean shieldActive = false;
+
     public Paddle(int x, int y, int width, int height, int speed) {
         this.x = x;
         this.y = y;
@@ -29,6 +32,29 @@ public class Paddle {
             x += speed;
         }
     }
+
+    public int getHitRegion(int ballX) {
+        int relativeX = ballX - x;
+        double region = (double) relativeX / width;
+        if (region < 0.2) return 0;
+        else if (region < 0.4) return 1;
+        else if (region < 0.6) return 2;
+        else if (region < 0.8) return 3;
+        else return 4;
+    }
+
+    public void activateShield() {
+        shieldActive = true;
+    }
+
+    public void deactivateShield() {
+        shieldActive = false;
+    }
+
+    public boolean hasShield() {
+        return shieldActive;
+    }
+
 
     public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
