@@ -31,6 +31,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         addKeyListener(this);        
         requestFocusInWindow();  
         startGame();
+        System.out.println("GAME STARTED");
     }
 
     private void startGame() {

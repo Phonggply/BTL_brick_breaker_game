@@ -52,7 +52,7 @@ public class PowerUpController {
     }
     private void applyEffect(PowerUp p, Paddle paddle){
 
-        switch(p.getType()){
+        /*switch(p.getType()){
 
             case EXPAND:
                 paddle.expand();
@@ -65,6 +65,6 @@ public class PowerUpController {
             case SHIELD:
                 paddle.activateShield();
                 break;
-        }
+        }*/
     }
 }

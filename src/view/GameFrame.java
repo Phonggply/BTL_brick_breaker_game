@@ -29,7 +29,7 @@ public class GameFrame extends JFrame {
     }
     public void showGame() {
 
-        remove(menuPanel);
+        getContentPane().removeAll();
 
         gamePanel = new GamePanel();
         add(gamePanel);
