@@ -89,7 +89,7 @@ public class GameController {
                     b.setXDir(1); // ép sang phải
                 }
                 else{
-                    b.setXDir(0); // đi thẳng
+                    b.setXDir( (Math.random() > 0.5) ? 1 : -1 ); // đi thẳng
                 }
             }
         }
