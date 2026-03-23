@@ -82,13 +82,14 @@ public class GameController {
 
                 int offset = ballCenter - paddleCenter;
 
-                b.reverseX();
-
                 if(offset < -10){
-                    b.reverseX();
+                    b.setXDir(-1); // ép sang trái
                 }
                 else if(offset > 10){
-                    b.reverseX();
+                    b.setXDir(1); // ép sang phải
+                }
+                else{
+                    b.setXDir(0); // đi thẳng
                 }
             }
         }
