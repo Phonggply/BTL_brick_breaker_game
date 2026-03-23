@@ -25,9 +25,15 @@ public class GameController {
         level = new Level();
         levelManager = new LevelManager();
         level = levelManager.getCurrentLevel();
-        gameState = GameState.START;
+        if (level == null) {
+            level = new Level(); // fallback
+        }
+        gameState = GameState.PLAYING;
     }
     public void update() {
+        if (level == null) {
+            level = new Level(); // fallback
+        }
         for(Ball b : balls){
             b.move();
         }
@@ -99,13 +105,13 @@ public class GameController {
         for(Ball b : balls){
             if(b.getY() >= Height){
 
-                if(paddle.hasShield()){
-                    b.reverseY();
-                    b.setPosition(b.getX(), Height - b.getSize());
-                }
-                else{
+                //if(paddle.hasShield()){
+                    //b.reverseY();
+                    //b.setPosition(b.getX(), Height - b.getSize());
+                //}
+                //else{
                     gameState = GameState.GAME_OVER;
-                }
+                //}
             }
         }
     }
@@ -120,10 +126,7 @@ public class GameController {
 
     }
     public Ball getBall(){
-        for(Ball b : balls){
-            return b;
-        }
-        return null;
+        return balls.isEmpty() ? null : balls.get(0);
     }
 
     public Paddle getPaddle(){

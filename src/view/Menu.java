@@ -7,14 +7,11 @@ import java.io.InputStream;
 public class Menu extends JPanel {
 
     private GameFrame frame;
+    
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
-        Image bg = new ImageIcon(
-            getClass().getClassLoader().getResource("assets/menubg.png")
-        ).getImage();
-
+        Image bg = new ImageIcon("BTL_brick_breaker_game/src/assets/menubg.png").getImage();
         g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
     }
     public Menu(GameFrame frame) {
@@ -32,28 +29,41 @@ public class Menu extends JPanel {
         JLabel title = new JLabel("BRICK BREAKER");
         title.setFont(titleFont);
         title.setForeground(Color.WHITE);
-        title.setBounds(150, 100, 500, 50);
+        
         title.setHorizontalAlignment(JLabel.CENTER);
         add(title);
 
         // ===== START BUTTON =====
         JButton startBtn = new JButton("START");
         startBtn.setFont(buttonFont);
-        startBtn.setBounds(300, 250, 200, 50);
-        startBtn.addActionListener(e -> this.frame.showGame());
+        
         styleButton(startBtn);
         add(startBtn);
 
         // ===== EXIT BUTTON =====
         JButton exitBtn = new JButton("EXIT");
         exitBtn.setFont(buttonFont);
-        exitBtn.setBounds(300, 320, 200, 50);
+        
         styleButton(exitBtn);
         add(exitBtn);
+
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent e) {
+
+                int centerX = getWidth() / 2;
+
+                title.setBounds(centerX - 250, 100, 500, 50);
+
+                startBtn.setBounds(centerX - 100, getHeight()/2 - 50, 200, 50);
+                exitBtn.setBounds(centerX - 100, getHeight()/2 + 20, 200, 50);
+            }
+        });
 
         // ===== ACTION =====
         startBtn.addActionListener(e -> frame.showGame());
         exitBtn.addActionListener(e -> System.exit(0));
+        setFocusable(true);
+        requestFocus();
     }
 
     // ===== LOAD FONT =====
