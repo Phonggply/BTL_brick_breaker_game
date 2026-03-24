@@ -21,18 +21,17 @@ public class GameController {
     public GameController() {
         Ball ball = new Ball(400, 300, 12, 3);
         balls.add(ball);
-        paddle = new Paddle(350, 550, 100, 20, 6);
-        level = new Level();
-        levelManager = new LevelManager();
+        paddle = new Paddle(350, 550, 100, 20, 35);
         level = levelManager.getCurrentLevel();
+        level = new Level();
         if (level == null) {
-            level = new Level(); // fallback
+            level = new Level();
         }
         gameState = GameState.PLAYING;
     }
     public void update() {
         if (level == null) {
-            level = new Level(); // fallback
+            level = new Level();
         }
         for(Ball b : balls){
             b.move();
