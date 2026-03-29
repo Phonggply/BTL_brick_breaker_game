@@ -1,55 +1,39 @@
-package BTL_brick_breaker_game.src.model;
+package model;
+
 import java.awt.Rectangle;
 
 public class PowerUp {
-
-    private int x;
-    private int y;
-
-    private int width = 30;
-    private int height = 30;
-
-    private int speed = 2;
-
-    private PowerUpType type;
-
-    private boolean active = true;
-    public enum PowerUpType {
+    public enum Type {
+        MULTIBALL,
         EXPAND,
-        MULTI_BALL,
         SHIELD
     }
-    public PowerUp(int x, int y, PowerUpType type){
+
+    private int x, y;
+    private int width = 30, height = 30;
+    private int speed = 3;
+    private Type type;
+    private boolean active = true;
+
+    public PowerUp(int x, int y, Type type) {
         this.x = x;
         this.y = y;
         this.type = type;
     }
 
-    public void update(){
+    public void move() {
         y += speed;
     }
 
-    public Rectangle getBounds(){
+    public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
     }
 
-    public int getX(){
-        return x;
-    }
-
-    public int getY(){
-        return y;
-    }
-
-    public PowerUpType getType(){
-        return type;
-    }
-
-    public boolean isActive(){
-        return active;
-    }
-
-    public void deactivate(){
-        active = false;
-    }
+    public int getX() { return x; }
+    public int getY() { return y; }
+    public int getWidth() { return width; }
+    public int getHeight() { return height; }
+    public Type getType() { return type; }
+    public boolean isActive() { return active; }
+    public void deactivate() { this.active = false; }
 }

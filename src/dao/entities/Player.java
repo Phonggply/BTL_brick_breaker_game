@@ -1,4 +1,4 @@
-package BTL_brick_breaker_game.src.dao.entities;
+package dao.entities;
 
 import java.util.Date;
 

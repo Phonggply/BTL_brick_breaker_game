@@ -1,71 +1,43 @@
-package BTL_brick_breaker_game.src.dao;
+package dao;
 
-import BTL_brick_breaker_game.src.dao.entities.Inventory;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import dao.entities.ShopItem;
 
 public class InventoryDAO {
     
-    private Connection connection;
+    public InventoryDAO() {}
     
-    public InventoryDAO() {
-        this.connection = DBConnection.getConnection();
+    private Connection getConnection() {
+        return DBConnection.getConnection();
     }
     
-    /**
-     * sp_GetInventory - Lấy kho đồ của người chơi
-     */
-    public List<Inventory> getPlayerInventory(int playerId) {
-        String sql = "{call sp_GetInventory(?)}";
-        List<Inventory> inventory = new ArrayList<>();
+    // Lấy danh sách các vật phẩm người chơi đang sở hữu
+    public List<ShopItem> getOwnedItems(int playerId) {
+        String sql = "SELECT si.* FROM ShopItems si " +
+                     "JOIN UserInventory ui ON si.ItemId = ui.ItemId " +
+                     "WHERE ui.PlayerId = ? AND ui.Quantity > 0";
+        List<ShopItem> items = new ArrayList<>();
+        Connection conn = getConnection();
+        if (conn == null) return items;
         
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            ResultSet rs = cstmt.executeQuery();
-            
-            while (rs.next()) {
-                Inventory item = new Inventory();
-                item.setInventoryId(rs.getInt("InventoryId"));
-                item.setPlayerId(rs.getInt("PlayerId"));
-                item.setItemId(rs.getInt("ItemId"));
-                item.setQuantity(rs.getInt("Quantity"));
-                item.setEquipped(rs.getBoolean("IsEquipped"));
-                item.setPurchasedAt(rs.getTimestamp("PurchasedAt"));
-                item.setItemName(rs.getString("ItemName"));
-                item.setItemType(rs.getString("ItemType"));
-                item.setEffectType(rs.getString("EffectType"));
-                item.setEffectValue(rs.getInt("EffectValue"));
-                inventory.add(item);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ShopItem item = new ShopItem();
+                    item.setItemId(rs.getInt("ItemId"));
+                    item.setItemName(rs.getString("ItemName"));
+                    item.setItemType(rs.getString("ItemType"));
+                    item.setEffectType(rs.getString("EffectType"));
+                    item.setEffectValue(rs.getInt("EffectValue"));
+                    items.add(item);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return inventory;
-    }
-    
-    /**
-     * sp_EquipItem - Trang bị vật phẩm
-     */
-    public String equipItem(int playerId, int itemId) {
-        String sql = "{call sp_EquipItem(?, ?)}";
-        
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            cstmt.setInt(2, itemId);
-            
-            ResultSet rs = cstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getString("Message");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return "Lỗi: " + e.getMessage();
-        }
-        return "Trang bị thất bại";
-    }
-    
-    public void close() {
-        DBConnection.closeConnection();
+        return items;
     }
 }

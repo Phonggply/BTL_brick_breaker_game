@@ -1,6 +1,6 @@
-package BTL_brick_breaker_game.src.dao;
+package dao;
 
-import BTL_brick_breaker_game.src.dao.entities.BallProperties;
+import dao.entities.BallProperties;
 import java.sql.*;
 
 public class BallPropertiesDAO {

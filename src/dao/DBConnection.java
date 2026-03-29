@@ -1,33 +1,32 @@
-package BTL_brick_breaker_game.src.dao;
+package dao;
 
 import java.sql.*;
 
 public class DBConnection {
-    private static final String SERVER = "localhost";
-    private static final String PORT = "1433";
-    private static final String DATABASE = "BrickBreakerGameDB";
-    private static final String USER = "sa";
-    private static final String PASSWORD = "123456";
-    
-    private static final String URL = "jdbc:sqlserver://" + SERVER + ":" + PORT + 
-            ";databaseName=" + DATABASE + 
-            ";encrypt=true;trustServerCertificate=true";
+    private static final String DATABASE_FILE = "brick_breaker.db";
+    private static final String URL = "jdbc:sqlite:" + DATABASE_FILE;
     
     private static Connection connection = null;
     
     public static Connection getConnection() {
-        if (connection == null) {
-            try {
-                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-                connection = DriverManager.getConnection(URL, USER, PASSWORD);
-                System.out.println("Kết nối SQL Server thành công!");
-            } catch (ClassNotFoundException e) {
-                System.err.println("Không tìm thấy driver SQL Server!");
-                e.printStackTrace();
-            } catch (SQLException e) {
-                System.err.println("Lỗi kết nối database: " + e.getMessage());
-                e.printStackTrace();
+        try {
+            if (connection == null || connection.isClosed()) {
+                // Tải driver SQLite
+                Class.forName("org.sqlite.JDBC");
+                connection = DriverManager.getConnection(URL);
+                System.out.println("Kết nối SQLite thành công!");
+                
+                // Bật hỗ trợ Foreign Keys (SQLite mặc định tắt)
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("PRAGMA foreign_keys = ON;");
+                }
             }
+        } catch (ClassNotFoundException e) {
+            System.err.println("Không tìm thấy driver SQLite! Hãy thêm sqlite-jdbc.jar vào thư viện.");
+            e.printStackTrace();
+        } catch (SQLException e) {
+            System.err.println("Lỗi kết nối SQLite: " + e.getMessage());
+            e.printStackTrace();
         }
         return connection;
     }
