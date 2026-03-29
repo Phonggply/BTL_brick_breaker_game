@@ -5,28 +5,30 @@ import java.sql.*;
 
 public class PaddlePropertiesDAO {
     
-    private Connection connection;
+    public PaddlePropertiesDAO() {}
     
-    public PaddlePropertiesDAO() {
-        this.connection = DBConnection.getConnection();
+    private Connection getConnection() {
+        return DBConnection.getConnection();
     }
     
     /**
-     * sp_GetPaddleProperties - Lấy thuộc tính vợt
+     * Lấy thuộc tính vợt của người chơi từ SQLite
      */
     public PaddleProperties getPaddleProperties(int playerId) {
-        String sql = "{call sp_GetPaddleProperties(?)}";
-        
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            ResultSet rs = cstmt.executeQuery();
-            
-            if (rs.next()) {
-                PaddleProperties props = new PaddleProperties();
-                props.setPlayerId(rs.getInt("PlayerId"));
-                props.setPaddleWidth(rs.getDouble("PaddleWidth"));
-                props.setPaddleSpeed(rs.getDouble("PaddleSpeed"));
-                return props;
+        String sql = "SELECT * FROM PaddleProperties WHERE PlayerId = ?";
+        Connection conn = getConnection();
+        if (conn == null) return null;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    PaddleProperties props = new PaddleProperties();
+                    props.setPlayerId(rs.getInt("PlayerId"));
+                    props.setPaddleWidth(rs.getDouble("PaddleWidth"));
+                    props.setPaddleSpeed(rs.getDouble("PaddleSpeed"));
+                    return props;
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
