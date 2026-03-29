@@ -1,4 +1,4 @@
-package BTL_brick_breaker_game.src.dao.entities;
+package dao.entities;
 
 public class BallProperties {
     private int playerId;

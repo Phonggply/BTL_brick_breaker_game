@@ -1,6 +1,6 @@
-package BTL_brick_breaker_game.src.dao;
+package dao;
 
-import BTL_brick_breaker_game.src.dao.entities.SaveGame;
+import dao.entities.SaveGame;
 import java.sql.*;
 
 public class SaveGameDAO {

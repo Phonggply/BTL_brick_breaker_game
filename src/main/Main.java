@@ -1,10 +1,13 @@
-package BTL_brick_breaker_game.src.main;
+package main;
 
 import javax.swing.SwingUtilities;
-import BTL_brick_breaker_game.src.view.GameFrame;
+import view.GameFrame;
 
 public class Main {
     public static void main(String[] args) {
+        // Khởi tạo Database SQLite trước khi mở giao diện
+        dao.DatabaseInitializer.initialize();
+        
         SwingUtilities.invokeLater(() -> {
             new GameFrame();
         });

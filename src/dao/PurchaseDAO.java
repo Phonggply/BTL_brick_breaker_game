@@ -1,6 +1,6 @@
-package BTL_brick_breaker_game.src.dao;
+package dao;
 
-import BTL_brick_breaker_game.src.dao.entities.Purchase;
+import dao.entities.Purchase;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
