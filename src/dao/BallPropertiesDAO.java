@@ -5,29 +5,31 @@ import java.sql.*;
 
 public class BallPropertiesDAO {
     
-    private Connection connection;
+    public BallPropertiesDAO() {}
     
-    public BallPropertiesDAO() {
-        this.connection = DBConnection.getConnection();
+    private Connection getConnection() {
+        return DBConnection.getConnection();
     }
     
     /**
-     * sp_GetBallProperties - Lấy thuộc tính bóng
+     * Lấy thuộc tính bóng của người chơi từ SQLite
      */
     public BallProperties getBallProperties(int playerId) {
-        String sql = "{call sp_GetBallProperties(?)}";
-        
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            ResultSet rs = cstmt.executeQuery();
-            
-            if (rs.next()) {
-                BallProperties props = new BallProperties();
-                props.setPlayerId(rs.getInt("PlayerId"));
-                props.setBallSpeed(rs.getDouble("BallSpeed"));
-                props.setBallSize(rs.getDouble("BallSize"));
-                props.setBallCount(rs.getInt("BallCount"));
-                return props;
+        String sql = "SELECT * FROM BallProperties WHERE PlayerId = ?";
+        Connection conn = getConnection();
+        if (conn == null) return null;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    BallProperties props = new BallProperties();
+                    props.setPlayerId(rs.getInt("PlayerId"));
+                    props.setBallSpeed(rs.getDouble("BallSpeed"));
+                    props.setBallSize(rs.getDouble("BallSize"));
+                    props.setBallCount(rs.getInt("BallCount"));
+                    return props;
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();

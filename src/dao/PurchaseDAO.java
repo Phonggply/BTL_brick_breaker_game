@@ -7,32 +7,30 @@ import java.util.List;
 
 public class PurchaseDAO {
     
-    private Connection connection;
+    public PurchaseDAO() {}
     
-    public PurchaseDAO() {
-        this.connection = DBConnection.getConnection();
+    private Connection getConnection() {
+        return DBConnection.getConnection();
     }
     
-    /**
-     * sp_GetPurchaseHistory - Lấy lịch sử mua hàng
-     */
-    public List<Purchase> getPurchaseHistory(int playerId) {
-        String sql = "{call sp_GetPurchaseHistory(?)}";
+    public List<Purchase> getPlayerPurchases(int playerId) {
+        String sql = "SELECT * FROM PurchaseHistory WHERE PlayerId = ? ORDER BY PurchaseDate DESC";
         List<Purchase> purchases = new ArrayList<>();
+        Connection conn = getConnection();
+        if (conn == null) return purchases;
         
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            ResultSet rs = cstmt.executeQuery();
-            
-            while (rs.next()) {
-                Purchase purchase = new Purchase();
-                purchase.setPurchaseId(rs.getInt("PurchaseId"));
-                purchase.setPlayerId(rs.getInt("PlayerId"));
-                purchase.setItemId(rs.getInt("ItemId"));
-                purchase.setPricePaid(rs.getInt("PricePaid"));
-                purchase.setPurchaseDate(rs.getTimestamp("PurchaseDate"));
-                purchase.setItemName(rs.getString("ItemName"));
-                purchases.add(purchase);
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Purchase p = new Purchase();
+                    p.setPurchaseId(rs.getInt("PurchaseId"));
+                    p.setPlayerId(rs.getInt("PlayerId"));
+                    p.setItemId(rs.getInt("ItemId"));
+                    p.setPricePaid(rs.getInt("PricePaid"));
+                    p.setPurchaseDate(rs.getTimestamp("PurchaseDate"));
+                    purchases.add(p);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();

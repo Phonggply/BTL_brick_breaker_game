@@ -5,58 +5,50 @@ import java.sql.*;
 
 public class SaveGameDAO {
     
-    private Connection connection;
+    public SaveGameDAO() {}
     
-    public SaveGameDAO() {
-        this.connection = DBConnection.getConnection();
+    private Connection getConnection() {
+        return DBConnection.getConnection();
     }
     
-    /**
-     * sp_SaveGame - Lưu game
-     */
-    public String saveGame(int playerId, String gameState) {
-        String sql = "{call sp_SaveGame(?, ?)}";
+    public boolean saveGame(int playerId, int level, int score, int lives, String gameState) {
+        String sql = "INSERT INTO SaveGame (PlayerId, Level, CurrentScore, Lives, GameState, SaveDate) " +
+                     "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+        Connection conn = getConnection();
+        if (conn == null) return false;
         
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            cstmt.setString(2, gameState);
-            
-            ResultSet rs = cstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getString("Message");
-            }
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            ps.setInt(2, level);
+            ps.setInt(3, score);
+            ps.setInt(4, lives);
+            ps.setString(5, gameState);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            return "Lỗi: " + e.getMessage();
         }
-        return "Lưu thất bại";
+        return false;
     }
     
-    /**
-     * sp_LoadLatestGame - Tải game mới nhất
-     */
-    public SaveGame loadLatestGame(int playerId) {
-        String sql = "{call sp_LoadLatestGame(?)}";
+    public SaveGame getLatestSave(int playerId) {
+        String sql = "SELECT * FROM SaveGame WHERE PlayerId = ? ORDER BY SaveDate DESC LIMIT 1";
+        Connection conn = getConnection();
+        if (conn == null) return null;
         
-        try (CallableStatement cstmt = connection.prepareCall(sql)) {
-            cstmt.setInt(1, playerId);
-            ResultSet rs = cstmt.executeQuery();
-            
-            if (rs.next()) {
-                SaveGame save = new SaveGame();
-                save.setSaveId(rs.getInt("SaveId"));
-                save.setPlayerId(rs.getInt("PlayerId"));
-                save.setSaveName(rs.getString("SaveName"));
-                save.setLevel(rs.getInt("Level"));
-                save.setCurrentScore(rs.getInt("CurrentScore"));
-                save.setLives(rs.getInt("Lives"));
-                save.setBricksRemaining(rs.getInt("BricksRemaining"));
-                save.setBallPositionX(rs.getDouble("BallPositionX"));
-                save.setBallPositionY(rs.getDouble("BallPositionY"));
-                save.setPaddlePositionX(rs.getDouble("PaddlePositionX"));
-                save.setGameState(rs.getString("GameState"));
-                save.setSaveDate(rs.getTimestamp("SaveDate"));
-                return save;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    SaveGame save = new SaveGame();
+                    save.setSaveId(rs.getInt("SaveId"));
+                    save.setPlayerId(rs.getInt("PlayerId"));
+                    save.setLevel(rs.getInt("Level"));
+                    save.setCurrentScore(rs.getInt("CurrentScore"));
+                    save.setLives(rs.getInt("Lives"));
+                    save.setGameState(rs.getString("GameState"));
+                    save.setSaveDate(rs.getTimestamp("SaveDate"));
+                    return save;
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
