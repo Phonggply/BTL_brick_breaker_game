@@ -6,9 +6,6 @@ public class Level {
     private int remainingBricks;
     private int[][] originalData;
 
-    private int fixedBrickWidth;
-    private int fixedBrickHeight = 18;
-
     public Level(int[][] data) {
         this.originalData = data;
     }
@@ -20,10 +17,6 @@ public class Level {
         bricks = new Brick[rows][cols];
         remainingBricks = 0;
 
-        // Tính toán kích thước gạch cố định dựa trên màn hình lúc bắt đầu
-        this.fixedBrickWidth = (int) (screenWidth / (cols + 2));
-        if (this.fixedBrickWidth > 100) this.fixedBrickWidth = 100;
-
         repositionBricks(screenWidth, screenHeight, true);
     }
 
@@ -31,36 +24,39 @@ public class Level {
         int rows = originalData.length;
         int cols = originalData[0].length;
 
-        int brickWidth = this.fixedBrickWidth;
-        int brickHeight = this.fixedBrickHeight;
+        // Tính toán chiều rộng gạch để lấp đầy khoảng 90% chiều rộng màn hình
+        int availableWidth = (int) (screenWidth * 0.95);
+        int brickWidth = availableWidth / cols;
         
-        // Tính toán khoảng cách giữa các hàng gạch theo tỉ lệ màn hình (khoảng 3% chiều cao)
-        int rowSpacing = (int) (screenHeight * 0.03);
-        if (rowSpacing < 4) rowSpacing = 4; // Tối thiểu 4px
-        if (rowSpacing > 10) rowSpacing = 10; // Tối đa 10px để gạch không rời rạc quá
+        // Chiều cao gạch cố định theo tỉ lệ màn hình (khoảng 3%)
+        int brickHeight = (int) (screenHeight * 0.035);
+        if (brickHeight < 18) brickHeight = 18;
         
-        // Vị trí bắt đầu của khối gạch (10% chiều cao màn hình)
-        int topOffset = (int) (screenHeight * 0.1);
+        // Vị trí bắt đầu (cách lề trên 8%)
+        int topOffset = (int) (screenHeight * 0.08);
         
-        int gridWidth = cols * brickWidth;
-        int offsetX = (screenWidth - gridWidth) / 2;
+        // Căn giữa khối gạch
+        int totalGridWidth = cols * brickWidth;
+        int offsetX = (screenWidth - totalGridWidth) / 2;
 
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
                 int typeId = originalData[r][c];
                 if (typeId > 0) {
+                    // Không cộng thêm spacing để các viên gạch nằm sát nhau
                     int x = c * brickWidth + offsetX;
-                    // Vị trí Y giờ đây phụ thuộc vào screenHeight
-                    int y = r * (brickHeight + rowSpacing) + topOffset;
+                    int y = r * brickHeight + topOffset;
                     
                     if (isInitial) {
                         Brick.BrickType type = getBrickTypeById(typeId);
-                        bricks[r][c] = new Brick(x, y, brickWidth - 2, brickHeight - 2, type);
+                        // Size bằng đúng brickWidth/brickHeight để khít nhau
+                        bricks[r][c] = new Brick(x, y, brickWidth, brickHeight, type);
                         if (type != Brick.BrickType.UNBREAKABLE) {
                             remainingBricks++;
                         }
                     } else if (bricks[r][c] != null) {
                         bricks[r][c].setPosition(x, y);
+                        bricks[r][c].setSize(brickWidth, brickHeight);
                     }
                 }
             }

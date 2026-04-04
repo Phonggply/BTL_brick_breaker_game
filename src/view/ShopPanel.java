@@ -33,29 +33,44 @@ public class ShopPanel extends JPanel {
         title.setForeground(Color.PINK);
         headerPanel.add(title, BorderLayout.WEST);
 
-        balanceLabel = new JLabel("COINS: 0");
+        balanceLabel = new JLabel("COINS: LOADING...");
         balanceLabel.setFont(loadFont(14f));
         balanceLabel.setForeground(Color.YELLOW);
         headerPanel.add(balanceLabel, BorderLayout.EAST);
 
         add(headerPanel, BorderLayout.NORTH);
 
-        // Item List
+        // Item List Container
         JPanel itemsPanel = new JPanel();
         itemsPanel.setLayout(new BoxLayout(itemsPanel, BoxLayout.Y_AXIS));
         itemsPanel.setBackground(new Color(30, 30, 30));
         itemsPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
 
-        List<ShopItem> items = shopItemDAO.getAllItems();
-        for (ShopItem item : items) {
-            itemsPanel.add(createItemRow(item));
-            itemsPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        }
-
         JScrollPane scrollPane = new JScrollPane(itemsPanel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         add(scrollPane, BorderLayout.CENTER);
+
+        // Load Items Asynchronously
+        new SwingWorker<List<ShopItem>, Void>() {
+            @Override
+            protected List<ShopItem> doInBackground() throws Exception {
+                return shopItemDAO.getAllItems();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<ShopItem> items = get();
+                    for (ShopItem item : items) {
+                        itemsPanel.add(createItemRow(item));
+                        itemsPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+                    }
+                    itemsPanel.revalidate();
+                    itemsPanel.repaint();
+                } catch (Exception e) { e.printStackTrace(); }
+            }
+        }.execute();
 
         // Back Button
         JButton backBtn = new JButton("BACK TO MENU");
@@ -108,12 +123,26 @@ public class ShopPanel extends JPanel {
         buyBtn.setForeground(Color.WHITE);
         buyBtn.setFocusPainted(false);
         buyBtn.addActionListener(e -> {
-            if (shopItemDAO.buyItem(currentPlayerId, item.getItemId(), 1)) {
-                JOptionPane.showMessageDialog(this, "Mua thành công " + item.getItemName() + "!");
-                refreshBalance();
-            } else {
-                JOptionPane.showMessageDialog(this, "Không đủ tiền để mua vật phẩm này!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+            buyBtn.setEnabled(false);
+            new SwingWorker<Boolean, Void>() {
+                @Override
+                protected Boolean doInBackground() throws Exception {
+                    return shopItemDAO.buyItem(currentPlayerId, item.getItemId(), 1);
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        if (get()) {
+                            JOptionPane.showMessageDialog(ShopPanel.this, "Mua thành công " + item.getItemName() + "!");
+                            refreshBalance();
+                        } else {
+                            JOptionPane.showMessageDialog(ShopPanel.this, "Không đủ tiền hoặc lỗi server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (Exception ex) { ex.printStackTrace(); }
+                    buyBtn.setEnabled(true);
+                }
+            }.execute();
         });
 
         actionPanel.add(priceLabel);
@@ -124,8 +153,20 @@ public class ShopPanel extends JPanel {
     }
 
     private void refreshBalance() {
-        int[] balance = playerDAO.checkBalance(currentPlayerId);
-        balanceLabel.setText("COINS: " + balance[0] + " | GEMS: " + balance[1]);
+        new SwingWorker<int[], Void>() {
+            @Override
+            protected int[] doInBackground() throws Exception {
+                return playerDAO.checkBalance(currentPlayerId);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int[] balance = get();
+                    balanceLabel.setText("COINS: " + balance[0] + " | GEMS: " + balance[1]);
+                } catch (Exception e) { e.printStackTrace(); }
+            }
+        }.execute();
     }
 
     private Font loadFont(float size) {

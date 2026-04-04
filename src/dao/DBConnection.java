@@ -13,45 +13,33 @@ public class DBConnection {
     private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME + "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
     
     private static Connection connection = null;
-    
-    public static Connection getConnection() {
+
+    public static synchronized Connection getConnection() throws SQLException {
         try {
-            if (connection == null || connection.isClosed()) {
+            if (connection == null || connection.isClosed() || !connection.isValid(2)) {
                 Class.forName("com.mysql.cj.jdbc.Driver");
                 connection = DriverManager.getConnection(URL, USER, PASSWORD);
-                System.out.println("Kết nối MySQL thành công!");
+                System.out.println("Đã thiết lập kết nối mới tới MySQL Server!");
             }
         } catch (ClassNotFoundException e) {
-            showError("Không tìm thấy Driver MySQL!\nHãy đảm bảo file .jar đã nằm trong thư mục lib.");
-        } catch (SQLException e) {
-            String msg = "Lỗi kết nối MySQL!\n";
-            if (e.getMessage().contains("Communications link failure")) {
-                msg += "- Bạn chưa bật MySQL Server (XAMPP/WampServer).\n- Hoặc địa chỉ IP máy chủ không đúng.";
-            } else if (e.getMessage().contains("Access denied")) {
-                msg += "- Sai Username hoặc Password MySQL (kiểm tra lại DBConnection.java).";
-            } else if (e.getMessage().contains("Unknown database")) {
-                msg += "- Chưa tạo Database 'brick_breaker'.\nHãy chạy lệnh: CREATE DATABASE brick_breaker;";
-            } else {
-                msg += "- Lỗi: " + e.getMessage();
-            }
-            showError(msg);
+            throw new SQLException("MySQL Driver not found", e);
         }
         return connection;
     }
 
-    private static void showError(String message) {
-        javax.swing.JOptionPane.showMessageDialog(null, message, "Lỗi Cơ Sở Dữ Liệu", javax.swing.JOptionPane.ERROR_MESSAGE);
+    // Không đóng connection ngay lập tức nữa, để dùng lại cho các lần sau
+    public static void close(Connection conn, Statement stmt, ResultSet rs) {
+        try { if (rs != null) rs.close(); } catch (SQLException e) {}
+        try { if (stmt != null) stmt.close(); } catch (SQLException e) {}
+        // Không đóng conn ở đây để reuse
     }
     
-    public static void closeConnection() {
-        if (connection != null) {
-            try {
+    public static void forceClose() {
+        try {
+            if (connection != null && !connection.isClosed()) {
                 connection.close();
-                connection = null;
-                System.out.println("Đã đóng kết nối database");
-            } catch (SQLException e) {
-                e.printStackTrace();
+                System.out.println("Đã đóng kết nối database vĩnh viễn.");
             }
-        }
+        } catch (SQLException e) { e.printStackTrace(); }
     }
 }

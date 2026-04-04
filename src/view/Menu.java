@@ -116,12 +116,31 @@ public class Menu extends JPanel {
     public void refreshPlayerData() {
         if (frame.getCurrentPlayer() == null) return;
         int playerId = frame.getCurrentPlayer().getPlayerId();
-        int[] balance = playerDAO.checkBalance(playerId);
-        int highestLevel = playerDAO.getHighestLevel(playerId);
         
-        if (coinsLabel != null) coinsLabel.setText("COINS: " + balance[0]);
-        if (gemsLabel != null) gemsLabel.setText("GEMS: " + balance[1]);
-        if (levelBtn != null) levelBtn.setText("LEVEL: " + highestLevel);
+        if (coinsLabel != null) coinsLabel.setText("COINS: ...");
+        if (gemsLabel != null) gemsLabel.setText("GEMS: ...");
+        if (levelBtn != null) levelBtn.setText("LEVEL: ...");
+
+        new SwingWorker<int[], Void>() {
+            private int highestLevel;
+            @Override
+            protected int[] doInBackground() throws Exception {
+                highestLevel = playerDAO.getHighestLevel(playerId);
+                return playerDAO.checkBalance(playerId);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int[] balance = get();
+                    if (coinsLabel != null) coinsLabel.setText("COINS: " + balance[0]);
+                    if (gemsLabel != null) gemsLabel.setText("GEMS: " + balance[1]);
+                    if (levelBtn != null) levelBtn.setText("LEVEL: " + highestLevel);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.execute();
     }
 
     private void loadResources() {

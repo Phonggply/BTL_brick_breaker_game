@@ -9,44 +9,44 @@ public class ShopItemDAO {
     
     public ShopItemDAO() {}
     
-    private Connection getConnection() {
-        return DBConnection.getConnection();
-    }
-    
     public List<ShopItem> getAllItems() {
         String sql = "SELECT * FROM ShopItems WHERE IsActive = 1";
         List<ShopItem> items = new ArrayList<>();
-        Connection conn = getConnection();
-        if (conn == null) return items;
-        
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    ShopItem item = new ShopItem();
-                    item.setItemId(rs.getInt("ItemId"));
-                    item.setItemName(rs.getString("ItemName"));
-                    item.setDescription(rs.getString("Description"));
-                    item.setPrice(rs.getInt("Price"));
-                    item.setCurrencyType(rs.getString("CurrencyType"));
-                    item.setItemType(rs.getString("ItemType"));
-                    item.setEffectType(rs.getString("EffectType"));
-                    item.setEffectValue(rs.getInt("EffectValue"));
-                    item.setImagePath(rs.getString("ImagePath"));
-                    item.setActive(rs.getBoolean("IsActive"));
-                    items.add(item);
-                }
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBConnection.getConnection();
+            if (conn == null) return items;
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                ShopItem item = new ShopItem();
+                item.setItemId(rs.getInt("ItemId"));
+                item.setItemName(rs.getString("ItemName"));
+                item.setDescription(rs.getString("Description"));
+                item.setPrice(rs.getInt("Price"));
+                item.setCurrencyType(rs.getString("CurrencyType"));
+                item.setItemType(rs.getString("ItemType"));
+                item.setEffectType(rs.getString("EffectType"));
+                item.setEffectValue(rs.getInt("EffectValue"));
+                item.setImagePath(rs.getString("ImagePath"));
+                item.setActive(rs.getBoolean("IsActive"));
+                items.add(item);
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            DBConnection.close(null, ps, rs);
         }
         return items;
     }
 
     public boolean buyItem(int playerId, int itemId, int quantity) {
-        Connection conn = getConnection();
-        if (conn == null) return false;
-        
+        Connection conn = null;
         try {
+            conn = DBConnection.getConnection();
+            if (conn == null) return false;
             conn.setAutoCommit(false);
             
             // 1. Lấy giá vật phẩm
@@ -68,7 +68,7 @@ public class ShopItemDAO {
             
             int totalPrice = price * quantity;
             
-            // 2. Kiểm tra số dư
+            // 2. Kiểm tra số dư và giới hạn mua
             String sqlCheckBalance = "SELECT Coins, Gems FROM Players WHERE PlayerId = ?";
             int currentBalance = 0;
             try (PreparedStatement ps = conn.prepareStatement(sqlCheckBalance)) {
@@ -83,6 +83,19 @@ public class ShopItemDAO {
             if (currentBalance < totalPrice) {
                 conn.rollback();
                 return false;
+            }
+
+            // MỚI: Kiểm tra giới hạn mua (chỉ cho mua tối đa 1 cái nếu chưa dùng)
+            String sqlCheckOwned = "SELECT Quantity FROM UserInventory WHERE PlayerId = ? AND ItemId = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sqlCheckOwned)) {
+                ps.setInt(1, playerId);
+                ps.setInt(2, itemId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt("Quantity") >= 1) {
+                        conn.rollback();
+                        return false; 
+                    }
+                }
             }
             
             // 3. Trừ tiền
@@ -136,10 +149,10 @@ public class ShopItemDAO {
             conn.commit();
             return true;
         } catch (SQLException e) {
-            try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            try { if (conn != null) conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
             e.printStackTrace();
         } finally {
-            try { conn.setAutoCommit(true); } catch (SQLException e) { e.printStackTrace(); }
+            try { if (conn != null) conn.setAutoCommit(true); } catch (SQLException e) { e.printStackTrace(); }
         }
         return false;
     }
