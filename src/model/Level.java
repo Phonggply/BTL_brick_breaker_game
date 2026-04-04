@@ -6,30 +6,41 @@ public class Level {
     private int remainingBricks;
     private int[][] originalData;
 
+    private int fixedBrickWidth;
+    private int fixedBrickHeight = 18;
+
     public Level(int[][] data) {
         this.originalData = data;
     }
 
-    public void initBricks(int screenWidth) {
-        if (screenWidth <= 0) return;
+    public void initBricks(int screenWidth, int screenHeight) {
+        if (screenWidth <= 0 || screenHeight <= 0) return;
         int rows = originalData.length;
         int cols = originalData[0].length;
         bricks = new Brick[rows][cols];
         remainingBricks = 0;
 
-        repositionBricks(screenWidth, true);
+        // Tính toán kích thước gạch cố định dựa trên màn hình lúc bắt đầu
+        this.fixedBrickWidth = (int) (screenWidth / (cols + 2));
+        if (this.fixedBrickWidth > 100) this.fixedBrickWidth = 100;
+
+        repositionBricks(screenWidth, screenHeight, true);
     }
 
-    public void repositionBricks(int screenWidth, boolean isInitial) {
+    public void repositionBricks(int screenWidth, int screenHeight, boolean isInitial) {
         int rows = originalData.length;
         int cols = originalData[0].length;
 
-        // Giữ chiều dài tối đa để lấp đầy màn hình như lúc tăng 1.5 lần
-        int brickWidth = (int) (screenWidth / (cols + 2)); 
-        if (brickWidth > 100) brickWidth = 100; // Giới hạn tối đa 100px
+        int brickWidth = this.fixedBrickWidth;
+        int brickHeight = this.fixedBrickHeight;
         
-        // Giữ chiều cao mỏng là 18px như bạn yêu cầu
-        int brickHeight = 18; 
+        // Tính toán khoảng cách giữa các hàng gạch theo tỉ lệ màn hình (khoảng 3% chiều cao)
+        int rowSpacing = (int) (screenHeight * 0.03);
+        if (rowSpacing < 4) rowSpacing = 4; // Tối thiểu 4px
+        if (rowSpacing > 10) rowSpacing = 10; // Tối đa 10px để gạch không rời rạc quá
+        
+        // Vị trí bắt đầu của khối gạch (10% chiều cao màn hình)
+        int topOffset = (int) (screenHeight * 0.1);
         
         int gridWidth = cols * brickWidth;
         int offsetX = (screenWidth - gridWidth) / 2;
@@ -39,18 +50,17 @@ public class Level {
                 int typeId = originalData[r][c];
                 if (typeId > 0) {
                     int x = c * brickWidth + offsetX;
-                    int y = r * brickHeight + 60;
+                    // Vị trí Y giờ đây phụ thuộc vào screenHeight
+                    int y = r * (brickHeight + rowSpacing) + topOffset;
                     
                     if (isInitial) {
                         Brick.BrickType type = getBrickTypeById(typeId);
-                        // Giữ khoảng cách 2px để nhìn rõ từng viên gạch
                         bricks[r][c] = new Brick(x, y, brickWidth - 2, brickHeight - 2, type);
                         if (type != Brick.BrickType.UNBREAKABLE) {
                             remainingBricks++;
                         }
                     } else if (bricks[r][c] != null) {
                         bricks[r][c].setPosition(x, y);
-                        bricks[r][c].setSize(brickWidth - 2, brickHeight - 2);
                     }
                 }
             }

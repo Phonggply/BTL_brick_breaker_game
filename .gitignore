@@ -1,5 +1,6 @@
 # Compiled class file
 *.class
+bin/
 
 # Log file
 *.log
@@ -11,7 +12,10 @@
 .mtj.tmp/
 
 # Package Files #
+# Chỉ cho phép .jar trong thư mục lib để tich hợp driver MySQL
 *.jar
+!lib/**/*.jar
+
 *.war
 *.nar
 *.ear
