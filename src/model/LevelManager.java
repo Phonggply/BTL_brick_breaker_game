@@ -18,7 +18,7 @@ public class LevelManager {
     }
 
     private void loadLevels() {
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 7; i++) {
             String path = "assets/levels/level" + i + ".txt";
             Level l = loadLevelFromFile(path);
             if (l != null) {

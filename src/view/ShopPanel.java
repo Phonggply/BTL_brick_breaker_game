@@ -12,10 +12,11 @@ public class ShopPanel extends JPanel {
 
     private ShopItemDAO shopItemDAO;
     private PlayerDAO playerDAO;
-    private int currentPlayerId = 1;
+    private int currentPlayerId;
     private JLabel balanceLabel;
 
-    public ShopPanel(GameFrame frame) {
+    public ShopPanel(GameFrame frame, int playerId) {
+        this.currentPlayerId = playerId;
         this.shopItemDAO = new ShopItemDAO();
         this.playerDAO = new PlayerDAO();
         

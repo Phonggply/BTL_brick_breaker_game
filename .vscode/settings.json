@@ -1,3 +1,7 @@
 {
-  "java.project.sourcePaths": ["src"]
+  "java.project.sourcePaths": ["src"],
+  "java.project.referencedLibraries": [
+    "lib/**/*.jar",
+    "c:\\Users\\phong\\Downloads\\mysql-connector-j-9.6.0\\mysql-connector-j-9.6.0\\mysql-connector-j-9.6.0.jar"
+  ]
 }

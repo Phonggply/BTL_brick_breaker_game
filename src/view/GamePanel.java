@@ -30,15 +30,15 @@ public class GamePanel extends JPanel implements Runnable {
     private Font gameFont;
 
     public GamePanel() {
-        this(0);
+        this(0, 1);
     }
 
-    public GamePanel(int startLevel) {
+    public GamePanel(int startLevel, int playerId) {
         setBackground(Color.BLACK);
         setFocusable(true);
         loadResources();
         inputHandler = new InputHandler();
-        gameController = new GameController(inputHandler, startLevel);
+        gameController = new GameController(inputHandler, startLevel, playerId);
         addKeyListener(inputHandler);        
         
         addHierarchyListener(e -> {
@@ -51,35 +51,49 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void loadResources() {
         try {
-            File bgFile = new File("assets/game_play_background.png");
-            if (bgFile.exists()) bgImage = ImageIO.read(bgFile);
-
-            File paddleFile = new File("assets/paddle.png");
-            if (paddleFile.exists()) paddleImage = ImageIO.read(paddleFile);
+            // Load Background
+            bgImage = loadImage("assets/game_play_background.png");
+            paddleImage = loadImage("assets/paddle.png");
 
             brickImages = new HashMap<>();
             String[] brickFiles = {"brick_normal.png", "brick_strong_2.png", "brick_strong_3.png", "brick_unbreakable.png"};
             Brick.BrickType[] types = {Brick.BrickType.NORMAL, Brick.BrickType.STRONG_2, Brick.BrickType.STRONG_3, Brick.BrickType.UNBREAKABLE};
             for (int i = 0; i < brickFiles.length; i++) {
-                File f = new File("assets/" + brickFiles[i]);
-                if (f.exists()) brickImages.put(types[i], ImageIO.read(f));
+                brickImages.put(types[i], loadImage("assets/" + brickFiles[i]));
             }
 
             powerUpImages = new HashMap<>();
             String[] powerUpFiles = {"multiball_powerup.png", "powerup_expand.png", "powerup_shield.png"};
             PowerUp.Type[] pTypes = {PowerUp.Type.MULTIBALL, PowerUp.Type.EXPAND, PowerUp.Type.SHIELD};
             for (int i = 0; i < powerUpFiles.length; i++) {
-                File f = new File("assets/" + powerUpFiles[i]);
-                if (f.exists()) powerUpImages.put(pTypes[i], ImageIO.read(f));
+                powerUpImages.put(pTypes[i], loadImage("assets/" + powerUpFiles[i]));
             }
 
+            // Load Font
             File fontFile = new File("assets/PressStart2P-Regular.ttf");
-            if (fontFile.exists()) gameFont = Font.createFont(Font.TRUETYPE_FONT, fontFile).deriveFont(12f);
-            else gameFont = new Font("Arial", Font.BOLD, 14);
+            if (fontFile.exists()) {
+                gameFont = Font.createFont(Font.TRUETYPE_FONT, fontFile).deriveFont(12f);
+            } else {
+                gameFont = new Font("Arial", Font.BOLD, 14);
+                System.err.println("Cảnh báo: Không tìm thấy font tại " + fontFile.getAbsolutePath());
+            }
         } catch (Exception e) {
             e.printStackTrace();
             gameFont = new Font("Arial", Font.BOLD, 14);
         }
+    }
+
+    private Image loadImage(String path) {
+        try {
+            File file = new File(path);
+            if (file.exists()) {
+                return ImageIO.read(file);
+            }
+            System.err.println("Lỗi: Không tìm thấy ảnh tại " + file.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private void startGame() {
@@ -248,6 +262,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void returnToMenu() {
+        gameController.endSession(); // Chốt điểm và cộng xu trước khi thoát
         stopGame();
         javax.swing.SwingUtilities.invokeLater(() -> {
             GameFrame frame = getFrame();
@@ -256,6 +271,7 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private void goToShop() {
+        gameController.endSession(); // Chốt điểm và cộng xu trước khi vào Shop
         stopGame();
         javax.swing.SwingUtilities.invokeLater(() -> {
             GameFrame frame = getFrame();

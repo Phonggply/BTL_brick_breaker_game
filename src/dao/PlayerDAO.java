@@ -12,14 +12,15 @@ public class PlayerDAO {
         return DBConnection.getConnection();
     }
     
-    public Player createPlayer(String userName, String email) {
-        String sql = "INSERT INTO Players (UserName, Email, Coins, Gems, CreatedDate, CreatedAt) VALUES (?, ?, 1000, 50, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+    public Player register(String userName, String password, String email) {
+        String sql = "INSERT INTO Players (UserName, Password, Email, Coins, Gems) VALUES (?, ?, ?, 1000, 50)";
         Connection conn = getConnection();
         if (conn == null) return null;
         
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, userName);
-            ps.setString(2, email);
+            ps.setString(2, password);
+            ps.setString(3, email);
             
             int affectedRows = ps.executeUpdate();
             if (affectedRows > 0) {
@@ -28,14 +29,49 @@ public class PlayerDAO {
                         int playerId = rs.getInt(1);
                         Player player = new Player(userName, email);
                         player.setPlayerId(playerId);
+                        // Khởi tạo GameStats cho người chơi mới
+                        initializeStats(playerId);
                         return player;
                     }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Lỗi đăng ký: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public Player login(String userName, String password) {
+        String sql = "SELECT * FROM Players WHERE UserName = ? AND Password = ?";
+        Connection conn = getConnection();
+        if (conn == null) return null;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, userName);
+            ps.setString(2, password);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Player player = new Player();
+                    player.setPlayerId(rs.getInt("PlayerId"));
+                    player.setUserName(rs.getString("UserName"));
+                    player.setEmail(rs.getString("Email"));
+                    player.setCoins(rs.getInt("Coins"));
+                    player.setGems(rs.getInt("Gems"));
+                    return player;
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
+    }
+
+    private void initializeStats(int playerId) {
+        String sql = "INSERT IGNORE INTO GameStats (PlayerId, HighestLevel) VALUES (?, 1)";
+        try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
     }
     
     public int[] checkBalance(int playerId) {
@@ -73,8 +109,6 @@ public class PlayerDAO {
                     player.setEmail(rs.getString("Email"));
                     player.setCoins(rs.getInt("Coins"));
                     player.setGems(rs.getInt("Gems"));
-                    // SQLite lưu date kiểu string hoặc long, ta lấy tạm làm Date
-                    player.setCreatedAt(rs.getTimestamp("CreatedAt"));
                     return player;
                 }
             }
@@ -99,20 +133,6 @@ public class PlayerDAO {
         return false;
     }
 
-    public boolean deletePlayer(int playerId) {
-        String sql = "DELETE FROM Players WHERE PlayerId = ?";
-        Connection conn = getConnection();
-        if (conn == null) return false;
-        
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, playerId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
     public int getHighestLevel(int playerId) {
         String sql = "SELECT HighestLevel FROM GameStats WHERE PlayerId = ?";
         Connection conn = getConnection();
@@ -130,7 +150,7 @@ public class PlayerDAO {
 
     public void updateHighestLevel(int playerId, int level) {
         String sql = "INSERT INTO GameStats (PlayerId, HighestLevel) VALUES (?, ?) " +
-                     "ON CONFLICT(PlayerId) DO UPDATE SET HighestLevel = MAX(HighestLevel, EXCLUDED.HighestLevel)";
+                     "ON DUPLICATE KEY UPDATE HighestLevel = GREATEST(HighestLevel, VALUES(HighestLevel))";
         Connection conn = getConnection();
         if (conn == null) return;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {

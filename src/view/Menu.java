@@ -10,7 +10,7 @@ public class Menu extends JPanel {
 
     private Image bgImage;
     private PlayerDAO playerDAO;
-    private int currentPlayerId = 1; // Mặc định người chơi 1
+    private GameFrame frame;
 
     private JLabel coinsLabel;
     private JLabel gemsLabel;
@@ -20,6 +20,7 @@ public class Menu extends JPanel {
     private JButton exitBtn;
 
     public Menu(GameFrame frame) {
+        this.frame = frame;
         this.playerDAO = new PlayerDAO();
         setLayout(null);
         setBackground(Color.BLACK);
@@ -29,8 +30,10 @@ public class Menu extends JPanel {
         Font titleFont = loadFont(30f);
         Font buttonFont = loadFont(15f);
         Font statsFont = loadFont(12f);
-
-        // ===== TITLE =====
+        
+        // Cập nhật dữ liệu người chơi
+        refreshPlayerData();
+        
         JLabel title = new JLabel("BRICK BREAKER");
         title.setFont(titleFont);
         title.setForeground(Color.WHITE);
@@ -111,20 +114,26 @@ public class Menu extends JPanel {
     }
 
     public void refreshPlayerData() {
-        int[] balance = playerDAO.checkBalance(currentPlayerId);
-        int highestLevel = playerDAO.getHighestLevel(currentPlayerId);
+        if (frame.getCurrentPlayer() == null) return;
+        int playerId = frame.getCurrentPlayer().getPlayerId();
+        int[] balance = playerDAO.checkBalance(playerId);
+        int highestLevel = playerDAO.getHighestLevel(playerId);
         
-        coinsLabel.setText("COINS: " + balance[0]);
-        gemsLabel.setText("GEMS: " + balance[1]);
-        levelBtn.setText("LEVEL: " + highestLevel);
+        if (coinsLabel != null) coinsLabel.setText("COINS: " + balance[0]);
+        if (gemsLabel != null) gemsLabel.setText("GEMS: " + balance[1]);
+        if (levelBtn != null) levelBtn.setText("LEVEL: " + highestLevel);
     }
 
     private void loadResources() {
         try {
             File bgFile = new File("assets/menubg.png");
-            if (bgFile.exists()) bgImage = ImageIO.read(bgFile);
+            if (bgFile.exists()) {
+                bgImage = ImageIO.read(bgFile);
+            } else {
+                System.err.println("Cảnh báo: Không tìm thấy ảnh nền Menu tại " + bgFile.getAbsolutePath());
+            }
         } catch (Exception e) {
-            System.err.println("Không tìm thấy ảnh nền Menu!");
+            e.printStackTrace();
         }
     }
 
