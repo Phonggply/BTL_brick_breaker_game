@@ -14,7 +14,9 @@ public class DBConnection {
                 // Tải driver SQLite
                 Class.forName("org.sqlite.JDBC");
                 connection = DriverManager.getConnection(URL);
+                java.io.File dbFile = new java.io.File(DATABASE_FILE);
                 System.out.println("Kết nối SQLite thành công!");
+                System.out.println("Đường dẫn database: " + dbFile.getAbsolutePath());
                 
                 // Bật hỗ trợ Foreign Keys (SQLite mặc định tắt)
                 try (Statement stmt = connection.createStatement()) {

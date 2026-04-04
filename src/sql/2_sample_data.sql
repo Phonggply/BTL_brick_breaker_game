@@ -28,21 +28,18 @@ GO
 -- Thêm vật phẩm shop
 INSERT INTO [dbo].[ShopItems] ([ItemName], [Description], [Price], [CurrencyType], [ItemType], [EffectType], [EffectValue], [ImagePath], [IsActive])
 VALUES 
-    -- PowerUps
-    ('Multi Ball', 'Tăng số bóng lên gấp đôi', 500, 'Coin', 'PowerUp', 'BallCount', 2, '/images/multiball.png', 1),
-    ('Slow Motion', 'Làm chậm tốc độ bóng', 300, 'Coin', 'PowerUp', 'BallSpeed', -20, '/images/slowmo.png', 1),
-    ('Fire Ball', 'Bóng xuyên qua gạch', 800, 'Coin', 'PowerUp', 'FireMode', 1, '/images/fireball.png', 1),
-    ('Extra Life', 'Thêm 1 mạng', 1000, 'Gem', 'PowerUp', 'Lives', 1, '/images/extralife.png', 1),
+    -- PowerUps (Đồng giá 300 Coin)
+    ('Multi Ball', 'Thêm 2 quả bóng mới vào màn chơi', 300, 'Coin', 'PowerUp', 'MULTIBALL', 1, 'assets/multiball_powerup.png', 1),
+    ('Expand Paddle', 'Tăng chiều rộng của thanh đỡ', 300, 'Coin', 'PowerUp', 'EXPAND', 20, 'assets/powerup_expand.png', 1),
+    ('Shield', 'Kích hoạt lá chắn bảo vệ bóng không bị rơi', 300, 'Coin', 'PowerUp', 'SHIELD', 20, 'assets/powerup_shield.png', 1),
+    ('Extra Life', 'Thêm 1 mạng chơi', 1000, 'Gem', 'PowerUp', 'Life', 1, 'assets/brick_strong_3.png', 1),
     
     -- Paddle Upgrades
-    ('Long Paddle', 'Tăng chiều dài vợt', 400, 'Coin', 'Paddle', 'PaddleWidth', 50, '/images/longpaddle.png', 1),
-    ('Fast Paddle', 'Tăng tốc độ vợt', 400, 'Coin', 'Paddle', 'PaddleSpeed', 5, '/images/fastpaddle.png', 1),
-    ('Magnetic Paddle', 'Hút bóng khi mất', 600, 'Gem', 'Paddle', 'Magnetic', 1, '/images/magnetic.png', 1),
+    ('Long Paddle', 'Tăng chiều dài vợt vĩnh viễn', 400, 'Coin', 'Width', 'Width', 20, 'assets/paddle.png', 1),
+    ('Fast Paddle', 'Tăng tốc độ vợt', 400, 'Coin', 'Paddle', 'PaddleSpeed', 5, 'assets/paddle.png', 1),
     
     -- Ball Upgrades
-    ('Speed Ball', 'Tăng tốc độ bóng', 350, 'Coin', 'Ball', 'BallSpeed', 2, '/images/speedball.png', 1),
-    ('Big Ball', 'Bóng to hơn', 450, 'Coin', 'Ball', 'BallSize', 0.5, '/images/bigball.png', 1),
-    ('Ghost Ball', 'Bóng xuyên qua', 700, 'Gem', 'Ball', 'GhostMode', 1, '/images/ghostball.png', 1);
+    ('Speed Ball', 'Tăng tốc độ bóng mặc định', 350, 'Coin', 'Ball', 'BallSpeed', 2, 'assets/brick_normal.png', 1);
 GO
 
 -- Thêm lịch sử điểm số

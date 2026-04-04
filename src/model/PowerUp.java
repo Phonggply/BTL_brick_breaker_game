@@ -25,6 +25,16 @@ public class PowerUp {
         y += speed;
     }
 
+    public void setPosition(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void setSize(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
     public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
     }
