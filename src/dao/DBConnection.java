@@ -3,32 +3,30 @@ package dao;
 import java.sql.*;
 
 public class DBConnection {
-    private static final String DATABASE_FILE = "brick_breaker.db";
-    private static final String URL = "jdbc:sqlite:" + DATABASE_FILE;
+    // Thông tin cấu hình MySQL
+    private static final String HOST = "localhost"; // Đổi thành IP máy chủ nếu kết nối từ xa
+    private static final String PORT = "3306";
+    private static final String DB_NAME = "brick_breaker";
+    private static final String USER = "root";
+    private static final String PASSWORD = "123456789"; // Nhập mật khẩu MySQL của bạn ở đây
+    
+    private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME + "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
     
     private static Connection connection = null;
     
     public static Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
-                // Tải driver SQLite
-                Class.forName("org.sqlite.JDBC");
-                connection = DriverManager.getConnection(URL);
-                java.io.File dbFile = new java.io.File(DATABASE_FILE);
-                System.out.println("Kết nối SQLite thành công!");
-                System.out.println("Đường dẫn database: " + dbFile.getAbsolutePath());
-                
-                // Bật hỗ trợ Foreign Keys (SQLite mặc định tắt)
-                try (Statement stmt = connection.createStatement()) {
-                    stmt.execute("PRAGMA foreign_keys = ON;");
-                }
+                // Tải driver MySQL
+                Class.forName("com.mysql.cj.jdbc.Driver");
+                connection = DriverManager.getConnection(URL, USER, PASSWORD);
+                System.out.println("Kết nối MySQL thành công!");
             }
         } catch (ClassNotFoundException e) {
-            System.err.println("Không tìm thấy driver SQLite! Hãy thêm sqlite-jdbc.jar vào thư viện.");
-            e.printStackTrace();
+            System.err.println("Không tìm thấy driver MySQL! Hãy thêm mysql-connector-java.jar vào thư viện.");
         } catch (SQLException e) {
-            System.err.println("Lỗi kết nối SQLite: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Lỗi kết nối MySQL: " + e.getMessage());
+            // Nếu chưa có database, có thể bạn cần tạo database 'brick_breaker' trước trong MySQL
         }
         return connection;
     }

@@ -55,8 +55,8 @@ public class ScoreDAO {
                 }
             }
             
-            // 3. Cộng xu thưởng
-            int coinReward = score / 10;
+            // 3. Cộng xu thưởng: Đổi tỉ lệ thành score / 15 để cân bằng game
+            int coinReward = score / 15;
             String sqlAddCoins = "UPDATE Players SET Coins = Coins + ? WHERE PlayerId = ?";
             try (PreparedStatement ps = conn.prepareStatement(sqlAddCoins)) {
                 ps.setInt(1, coinReward);

@@ -18,16 +18,16 @@ public class GameController {
     private List<PowerUp> fallingPowerUps = new CopyOnWriteArrayList<>();
     private Paddle paddle;
     private Level level;
-    private GameState gameState;
     private LevelManager levelManager;
     private InputHandler inputHandler;
     private PlayerDAO playerDAO;
     private dao.ScoreDAO scoreDAO;
     
-    private int score = 0;
+    private volatile int score = 0;
     private int consecutiveHits = 0;
     private int currentPlayerId = 1; 
-    private int lives = 3; 
+    private volatile int lives = 3; 
+    private volatile GameState gameState;
     private boolean initialized = false;
     private int lastWidth = 0, lastHeight = 0;
 
@@ -35,11 +35,12 @@ public class GameController {
     private int bonusWidth = 0;
 
     public GameController(InputHandler inputHandler) {
-        this(inputHandler, 0);
+        this(inputHandler, 0, 1);
     }
 
-    public GameController(InputHandler inputHandler, int startLevel) {
+    public GameController(InputHandler inputHandler, int startLevel, int playerId) {
         this.inputHandler = inputHandler;
+        this.currentPlayerId = playerId;
         this.playerDAO = new PlayerDAO();
         this.scoreDAO = new dao.ScoreDAO();
         levelManager = new LevelManager();
@@ -92,10 +93,10 @@ public class GameController {
         if (screenWidth != lastWidth || screenHeight != lastHeight) handleResize(screenWidth, screenHeight);
         handleInput(screenWidth);
 
-        int subSteps = 4;
+        int subSteps = 5; // Tăng bước nhỏ để va chạm chính xác hơn
         for (int step = 0; step < subSteps; step++) {
             for (Ball b : balls) {
-                b.move(1.0 / subSteps); // Di chuyển 1/4 quãng đường
+                b.move(1.0 / subSteps);
                 checkWallCollision(b, screenWidth, screenHeight);
                 checkBrickCollision(b);
                 checkPaddleCollision(b);
@@ -133,13 +134,21 @@ public class GameController {
             for (Brick brick : row) {
                 if (brick != null && !brick.isDestroyed() && ballBounds.intersects(brick.getBounds())) {
                     handleCollisionDirection(b, brick);
+                    
                     if (brick.getType() != Brick.BrickType.UNBREAKABLE) {
-                        brick.hit();
                         consecutiveHits++;
-                        int multiplier = (consecutiveHits >= 3) ? consecutiveHits : 1;
-                        score += (10 * multiplier);
+                        int multiplier = (consecutiveHits >= 3) ? 2 : 1;
+                        
+                        // Nếu gạch chưa vỡ hẳn (Level 3->2 hoặc 2->1) thì được 5 điểm
+                        // Nếu gạch vỡ hẳn (Level 1->0) thì được 10 điểm
+                        int hitPoints = (brick.getHealth() > 1) ? 5 : 10;
+                        
+                        score += (hitPoints * multiplier);
+                        
+                        brick.hit(); // Giảm máu viên gạch
+                        
                         if (brick.isDestroyed()) {
-                            score += (20 * multiplier); 
+                            // level.brickDestroyed() đã xử lý trong brick.hit() hoặc controller
                             level.brickDestroyed();
                             spawnPowerUp(brick.getX() + brick.getWidth()/2, brick.getY());
                         }
@@ -154,39 +163,42 @@ public class GameController {
         if (b.getBounds().intersects(paddle.getBounds())) {
             Rectangle ballBounds = b.getBounds();
             Rectangle paddleBounds = paddle.getBounds();
-            Rectangle intersection = ballBounds.intersection(paddleBounds);
-
-            if (intersection.width < intersection.height) {
-                // Cạnh bên: Nảy gương
-                b.reverseX();
-                if (ballBounds.getCenterX() < paddleBounds.getCenterX()) b.setPosition(paddleBounds.x - b.getSize() - 1, b.getY());
-                else b.setPosition(paddleBounds.x + paddleBounds.width + 1, b.getY());
-            } else {
-                // Mặt trên: Ép góc nảy lên
-                b.setPosition(b.getX(), paddle.getY() - b.getSize() - 1);
-                consecutiveHits = 0;
-                int hitPos = (int)(ballBounds.getCenterX() - paddleBounds.x);
-                int segmentW = paddleBounds.width / 5;
-                if (hitPos < segmentW) b.setDirection(150);
-                else if (hitPos < segmentW * 2) b.setDirection(120);
-                else if (hitPos < segmentW * 3) b.setDirection(90);
-                else if (hitPos < segmentW * 4) b.setDirection(60);
-                else b.setDirection(30);
-            }
+            
+            // Đẩy bóng ra khỏi Paddle ngay lập tức để tránh dính bóng
+            b.setPosition(b.getX(), paddle.getY() - b.getSize() - 1);
+            
+            consecutiveHits = 0;
+            int hitPos = (int)(ballBounds.getCenterX() - paddleBounds.x);
+            int segmentW = paddleBounds.width / 5;
+            
+            // Ép góc nảy dựa trên vị trí chạm thanh đỡ
+            if (hitPos < segmentW) b.setDirection(150);
+            else if (hitPos < segmentW * 2) b.setDirection(120);
+            else if (hitPos < segmentW * 3) b.setDirection(90);
+            else if (hitPos < segmentW * 4) b.setDirection(60);
+            else b.setDirection(30);
         }
     }
 
     private void handleCollisionDirection(Ball b, Brick brick) {
         Rectangle ballBounds = b.getBounds(), brickBounds = brick.getBounds();
         Rectangle intersection = ballBounds.intersection(brickBounds);
+        
+        // Nếu diện tích va chạm theo chiều rộng nhỏ hơn chiều cao -> Va chạm từ bên cạnh
         if (intersection.width < intersection.height) {
             b.reverseX();
-            if (ballBounds.getCenterX() < brickBounds.getCenterX()) b.setPosition(brickBounds.x - b.getSize() - 1, b.getY());
-            else b.setPosition(brickBounds.x + brickBounds.width + 1, b.getY());
+            // Đẩy bóng ra ngoài viên gạch để tránh bị "nhốt"
+            if (ballBounds.getCenterX() < brickBounds.getCenterX()) 
+                b.setPosition(brickBounds.x - b.getSize() - 1, b.getY());
+            else 
+                b.setPosition(brickBounds.x + brickBounds.width + 1, b.getY());
         } else {
+            // Va chạm từ trên hoặc dưới
             b.reverseY();
-            if (ballBounds.getCenterY() < brickBounds.getCenterY()) b.setPosition(b.getX(), brickBounds.y - b.getSize() - 1);
-            else b.setPosition(b.getX(), brickBounds.y + brickBounds.height + 1);
+            if (ballBounds.getCenterY() < brickBounds.getCenterY()) 
+                b.setPosition(b.getX(), brickBounds.y - b.getSize() - 1);
+            else 
+                b.setPosition(b.getX(), brickBounds.y + brickBounds.height + 1);
         }
     }
 
@@ -229,9 +241,14 @@ public class GameController {
     private void checkBallOut(int screenWidth, int screenHeight) {
         for (int i = 0; i < balls.size(); i++) {
             Ball b = balls.get(i);
-            if (b.getY() >= screenHeight) {
-                if (paddle.isShieldActive()) { b.reverseY(); b.setPosition(b.getX(), screenHeight - b.getSize() - 20); }
-                else balls.remove(i--);
+            if (b.getY() + b.getSize() >= screenHeight - 15) { // Kiểm tra vùng gần Shield
+                if (paddle.isShieldActive()) {
+                    b.reverseY();
+                    // Đẩy bóng lên trên vùng an toàn của Shield
+                    b.setPosition(b.getX(), screenHeight - b.getSize() - 25);
+                } else if (b.getY() >= screenHeight) {
+                    balls.remove(i--);
+                }
             }
         }
         if (balls.isEmpty()) {
@@ -242,18 +259,30 @@ public class GameController {
                 balls.add(newBall);
             } else {
                 gameState = GameState.GAME_OVER;
-                playerDAO.addCoins(currentPlayerId, score / 10);
+                endSession(); // Lưu điểm và cộng xu khi hết mạng
             }
+        }
+    }
+
+    public void endSession() {
+        if (score > 0 || lives < 3) {
+            // Lưu điểm và cộng xu (score / 15) trong ScoreDAO
+            scoreDAO.gameOver(currentPlayerId, score);
+            
+            // Tặng thưởng chuyên cần cố định 50 xu mỗi ván
+            playerDAO.addCoins(currentPlayerId, 50);
+            
+            score = 0; // Reset điểm
         }
     }
 
     private void checkLevelComplete(int screenWidth, int screenHeight) {
         if (level != null && level.isLevelComplete()) {
-            // 1. Lưu điểm và cộng xu theo điểm (giống lúc thua)
-            scoreDAO.gameOver(currentPlayerId, score);
+            // 1. Lưu điểm và cộng xu thưởng theo điểm
+            endSession();
             
-            // 2. Thưởng thêm 500 xu vì đã thắng màn
-            playerDAO.addCoins(currentPlayerId, 500);
+            // 2. Thưởng thêm 200 xu vì đã thắng màn (Phần thưởng vượt ải)
+            playerDAO.addCoins(currentPlayerId, 200);
             
             gameState = GameState.PAUSED; 
         }

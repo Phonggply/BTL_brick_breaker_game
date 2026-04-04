@@ -20,11 +20,13 @@ public class Paddle {
     }
 
     public void moveLeft() {
-        if (x - speed >= 0) x -= speed;
+        x -= speed;
+        if (x < 0) x = 0;
     }
 
     public void moveRight(int screenWidth) {
-        if (x + width + speed <= screenWidth) x += speed;
+        x += speed;
+        if (x + width > screenWidth) x = screenWidth - width;
     }
 
     public void expand(int screenWidth) {
