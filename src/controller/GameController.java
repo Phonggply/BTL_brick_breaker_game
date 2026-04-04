@@ -281,15 +281,47 @@ public class GameController {
     public int getLives() { return lives; }
 
     private void handleResize(int screenWidth, int screenHeight) {
+        if (lastWidth <= 0 || lastHeight <= 0) {
+            lastWidth = screenWidth;
+            lastHeight = screenHeight;
+            return;
+        }
+
+        double scaleX = (double) screenWidth / lastWidth;
+        double scaleY = (double) screenHeight / lastHeight;
+
         if (level != null) level.repositionBricks(screenWidth, false);
+        
         if (paddle != null) {
-            int paddleW = screenWidth / 8;
+            // Cập nhật vị trí X của paddle theo tỉ lệ
+            int newX = (int) (paddle.getX() * scaleX);
+            int paddleW = screenWidth / 8 + bonusWidth;
             int paddleH = 15;
             int paddleY = (int)(screenHeight * 0.8);
+            
+            paddle.setX(newX);
             paddle.setSize(paddleW, paddleH);
             paddle.setY(paddleY);
-            if (paddle.getX() + paddleW > screenWidth) paddle.setX(screenWidth - paddleW);
+            
+            // Đảm bảo paddle không vượt quá biên màn hình
+            if (paddle.getX() < 0) paddle.setX(0);
+            if (paddle.getX() + paddle.getWidth() > screenWidth) paddle.setX(screenWidth - paddle.getWidth());
         }
+
+        // Cập nhật vị trí tất cả các quả bóng theo tỉ lệ
+        for (Ball b : balls) {
+            double newX = b.getX() * scaleX;
+            double newY = b.getY() * scaleY;
+            b.setPosition(newX, newY);
+        }
+
+        // Cập nhật vị trí các PowerUp đang rơi theo tỉ lệ
+        for (PowerUp p : fallingPowerUps) {
+            int newX = (int) (p.getX() * scaleX);
+            int newY = (int) (p.getY() * scaleY);
+            p.setPosition(newX, newY);
+        }
+
         lastWidth = screenWidth;
         lastHeight = screenHeight;
     }
