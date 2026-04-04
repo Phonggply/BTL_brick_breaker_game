@@ -7,19 +7,10 @@ public class BallPropertiesDAO {
     
     public BallPropertiesDAO() {}
     
-    private Connection getConnection() {
-        return DBConnection.getConnection();
-    }
-    
-    /**
-     * Lấy thuộc tính bóng của người chơi từ SQLite
-     */
     public BallProperties getBallProperties(int playerId) {
         String sql = "SELECT * FROM BallProperties WHERE PlayerId = ?";
-        Connection conn = getConnection();
-        if (conn == null) return null;
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, playerId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -35,9 +26,5 @@ public class BallPropertiesDAO {
             e.printStackTrace();
         }
         return null;
-    }
-    
-    public void close() {
-        DBConnection.closeConnection();
     }
 }

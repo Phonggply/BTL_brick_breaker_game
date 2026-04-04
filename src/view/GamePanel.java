@@ -111,29 +111,46 @@ public class GamePanel extends JPanel implements Runnable {
 
     @Override
     public void run() {
+        long lastTime = System.nanoTime();
+        double nsPerTick = 1000000000.0 / 60.0;
+        double delta = 0;
+
         while(running){
-            model.GameState state = gameController.getGameState();
-            Level currentLevel = gameController.getLevel();
-            boolean isWin = currentLevel != null && currentLevel.isLevelComplete();
+            long now = System.nanoTime();
+            delta += (now - lastTime) / nsPerTick;
+            lastTime = now;
 
-            if (state == model.GameState.PAUSED || state == model.GameState.GAME_OVER) {
-                if (inputHandler.isOnePressed()) {
-                    inputHandler.setOnePressed(false);
-                    if (isWin) gameController.nextLevel(getWidth(), getHeight());
-                    else handleStateInput(KeyEvent.VK_1, state);
-                } else if (inputHandler.isTwoPressed()) {
-                    inputHandler.setTwoPressed(false);
-                    handleStateInput(KeyEvent.VK_2, state);
-                } else if (inputHandler.isThreePressed()) {
-                    inputHandler.setThreePressed(false);
-                    handleStateInput(KeyEvent.VK_3, state);
-                }
+            while (delta >= 1) {
+                update();
+                delta--;
             }
-
-            gameController.update(getWidth(), getHeight());
+            
             repaint();
-            try { Thread.sleep(16); } catch(Exception e) { e.printStackTrace(); }
+            
+            try { Thread.sleep(2); } catch(Exception e) { e.printStackTrace(); }
         }
+    }
+
+    private void update() {
+        model.GameState state = gameController.getGameState();
+        Level currentLevel = gameController.getLevel();
+        boolean isWin = currentLevel != null && currentLevel.isLevelComplete();
+
+        if (state == model.GameState.PAUSED || state == model.GameState.GAME_OVER) {
+            if (inputHandler.isOnePressed()) {
+                inputHandler.setOnePressed(false);
+                if (isWin) gameController.nextLevel(getWidth(), getHeight());
+                else handleStateInput(KeyEvent.VK_1, state);
+            } else if (inputHandler.isTwoPressed()) {
+                inputHandler.setTwoPressed(false);
+                handleStateInput(KeyEvent.VK_2, state);
+            } else if (inputHandler.isThreePressed()) {
+                inputHandler.setThreePressed(false);
+                handleStateInput(KeyEvent.VK_3, state);
+            }
+        }
+
+        gameController.update(getWidth(), getHeight());
     }
 
     @Override

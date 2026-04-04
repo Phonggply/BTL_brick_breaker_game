@@ -15,6 +15,7 @@ public class LevelSelectPanel extends JPanel {
     public LevelSelectPanel(GameFrame frame) {
         this.playerDAO = new PlayerDAO();
         this.levelManager = new LevelManager();
+        this.currentPlayerId = frame.getCurrentPlayer() != null ? frame.getCurrentPlayer().getPlayerId() : 1;
         
         setLayout(new BorderLayout());
         setBackground(Color.BLACK);
@@ -31,31 +32,43 @@ public class LevelSelectPanel extends JPanel {
         JPanel gridPanel = new JPanel(new GridLayout(3, 4, 20, 20));
         gridPanel.setBackground(Color.BLACK);
         gridPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
-
-        int highestLevel = playerDAO.getHighestLevel(currentPlayerId);
-        int totalLevels = levelManager.getLevelCount();
-
-        for (int i = 1; i <= totalLevels; i++) {
-            final int levelIdx = i;
-            JButton btn = new JButton("LEVEL " + i);
-            btn.setFont(loadFont(10f));
-            btn.setFocusPainted(false);
-            
-            if (i <= highestLevel) {
-                btn.setBackground(new Color(50, 150, 50));
-                btn.setForeground(Color.WHITE);
-                btn.addActionListener(e -> {
-                    frame.showGameAtLevel(levelIdx - 1);
-                });
-            } else {
-                btn.setBackground(Color.DARK_GRAY);
-                btn.setForeground(Color.LIGHT_GRAY);
-                btn.setText("LOCKED");
-                btn.setEnabled(false);
-            }
-            gridPanel.add(btn);
-        }
         add(gridPanel, BorderLayout.CENTER);
+
+        // Load Levels Asynchronously
+        new SwingWorker<Integer, Void>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                return playerDAO.getHighestLevel(currentPlayerId);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    int highestLevel = get();
+                    int totalLevels = levelManager.getLevelCount();
+                    for (int i = 1; i <= totalLevels; i++) {
+                        final int levelIdx = i;
+                        JButton btn = new JButton("LEVEL " + i);
+                        btn.setFont(loadFont(10f));
+                        btn.setFocusPainted(false);
+                        
+                        if (i <= highestLevel) {
+                            btn.setBackground(new Color(50, 150, 50));
+                            btn.setForeground(Color.WHITE);
+                            btn.addActionListener(e -> frame.showGameAtLevel(levelIdx - 1));
+                        } else {
+                            btn.setBackground(Color.DARK_GRAY);
+                            btn.setForeground(Color.LIGHT_GRAY);
+                            btn.setText("LOCKED");
+                            btn.setEnabled(false);
+                        }
+                        gridPanel.add(btn);
+                    }
+                    gridPanel.revalidate();
+                    gridPanel.repaint();
+                } catch (Exception e) { e.printStackTrace(); }
+            }
+        }.execute();
 
         // Back Button
         JButton backBtn = new JButton("BACK TO MENU");

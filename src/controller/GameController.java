@@ -22,6 +22,8 @@ public class GameController {
     private InputHandler inputHandler;
     private PlayerDAO playerDAO;
     private dao.ScoreDAO scoreDAO;
+    private dao.BallPropertiesDAO ballPropertiesDAO;
+    private dao.PaddlePropertiesDAO paddlePropertiesDAO;
     
     private volatile int score = 0;
     private int consecutiveHits = 0;
@@ -33,6 +35,12 @@ public class GameController {
 
     private int bonusLives = 0;
     private int bonusWidth = 0;
+    private double ballSpeedMultiplier = 1.0;
+    private double ballSizeMultiplier = 1.0;
+    private double paddleSpeedMultiplier = 1.0;
+    private volatile boolean loading = true;
+    private boolean hasMultiBallUpgrade = false;
+    private int shieldDurationFromUpgrade = 0;
 
     public GameController(InputHandler inputHandler) {
         this(inputHandler, 0, 1);
@@ -43,6 +51,9 @@ public class GameController {
         this.currentPlayerId = playerId;
         this.playerDAO = new PlayerDAO();
         this.scoreDAO = new dao.ScoreDAO();
+        this.ballPropertiesDAO = new dao.BallPropertiesDAO();
+        this.paddlePropertiesDAO = new dao.PaddlePropertiesDAO();
+        
         levelManager = new LevelManager();
         levelManager.setCurrentLevel(startLevel);
         level = levelManager.getCurrentLevel();
@@ -50,39 +61,109 @@ public class GameController {
             level = new Level(new int[][]{{1, 1, 1, 1, 1}});
         }
         gameState = GameState.PLAYING;
-        applyInventoryUpgrades();
+        
+        new Thread(() -> {
+            applyInventoryUpgrades();
+            loadProperties();
+            loading = false;
+        }).start();
     }
+
+    public boolean isLoading() { return loading; }
 
     private void applyInventoryUpgrades() {
         dao.InventoryDAO inventoryDAO = new dao.InventoryDAO();
         List<dao.entities.ShopItem> ownedItems = inventoryDAO.getOwnedItems(currentPlayerId);
+        
+        bonusWidth = 0;
+        bonusLives = 0;
+        hasMultiBallUpgrade = false;
+        shieldDurationFromUpgrade = 0;
+
         for (dao.entities.ShopItem item : ownedItems) {
-            if ("Life".equals(item.getEffectType())) bonusLives += item.getEffectValue();
-            else if ("Width".equals(item.getEffectType())) bonusWidth += item.getEffectValue();
+            String type = item.getEffectType();
+            int value = item.getEffectValue();
+            
+            boolean consumed = false;
+            if ("EXPAND".equals(type) || "Width".equals(type)) {
+                bonusWidth += value;
+                consumed = true;
+            } else if ("Life".equals(type)) {
+                bonusLives += value;
+                consumed = true;
+            } else if ("MULTIBALL".equals(type)) {
+                hasMultiBallUpgrade = true;
+                consumed = true;
+            } else if ("SHIELD".equals(type)) {
+                shieldDurationFromUpgrade = Math.max(shieldDurationFromUpgrade, value);
+                consumed = true;
+            }
+
+            if (consumed) {
+                inventoryDAO.consumeItem(currentPlayerId, item.getItemId());
+            }
         }
-        this.lives += bonusLives;
+        this.lives = 3 + bonusLives;
+    }
+
+    private void loadProperties() {
+        dao.entities.BallProperties ballProps = ballPropertiesDAO.getBallProperties(currentPlayerId);
+        if (ballProps != null) {
+            this.ballSpeedMultiplier = ballProps.getBallSpeed() / 5.0;
+            this.ballSizeMultiplier = ballProps.getBallSize();
+        }
+        
+        dao.entities.PaddleProperties paddleProps = paddlePropertiesDAO.getPaddleProperties(currentPlayerId);
+        if (paddleProps != null) {
+            this.paddleSpeedMultiplier = paddleProps.getPaddleSpeed() / 12.0;
+        }
     }
 
     private void resetBallAndPaddle(int currentWidth, int currentHeight) {
         balls.clear();
         fallingPowerUps.clear();
+        
         int paddleW = (currentWidth / 8) + bonusWidth;
-        int paddleH = 15;
+        int paddleH = Math.max(10, (int)(currentHeight * 0.025));
         int paddleY = (int)(currentHeight * 0.8);
-        Ball initialBall = new Ball(currentWidth/2, paddleY - 20, 12, 5.0);
+        
+        int baseBallSize = Math.max(8, (int)(currentWidth * 0.015));
+        int ballSize = (int)(baseBallSize * ballSizeMultiplier);
+        double ballSpeed = 5.0 * ballSpeedMultiplier;
+        int paddleSpeed = (int)(12 * paddleSpeedMultiplier);
+        
+        Ball initialBall = new Ball(currentWidth/2, paddleY - 20, ballSize, ballSpeed);
         initialBall.setDirection(90); 
         balls.add(initialBall);
-        paddle = new Paddle(currentWidth/2 - paddleW/2, paddleY, paddleW, paddleH, 12);
+
+        if (hasMultiBallUpgrade) {
+            Ball b1 = new Ball(initialBall.getX(), initialBall.getY(), ballSize, ballSpeed);
+            b1.setDirection(120);
+            balls.add(b1);
+            Ball b2 = new Ball(initialBall.getX(), initialBall.getY(), ballSize, ballSpeed);
+            b2.setDirection(60);
+            balls.add(b2);
+        }
+
+        paddle = new Paddle(currentWidth/2 - paddleW/2, paddleY, paddleW, paddleH, paddleSpeed);
+        
+        if (shieldDurationFromUpgrade > 0) {
+            paddle.activateShield(shieldDurationFromUpgrade);
+        }
+
         consecutiveHits = 0;
         lastWidth = currentWidth;
         lastHeight = currentHeight;
     }
 
     public void update(int screenWidth, int screenHeight) {
-        if (inputHandler.isEscapePressed()) {
+        if (loading || inputHandler.isEscapePressed()) {
             inputHandler.setEscapePressed(false);
-            if (gameState == GameState.PLAYING) gameState = GameState.PAUSED;
-            else if (gameState == GameState.PAUSED) gameState = GameState.PLAYING;
+            if (!loading) {
+                if (gameState == GameState.PLAYING) gameState = GameState.PAUSED;
+                else if (gameState == GameState.PAUSED) gameState = GameState.PLAYING;
+            }
+            return;
         }
         if (gameState != GameState.PLAYING || screenWidth <= 0 || screenHeight <= 0) return;
         
@@ -191,7 +272,7 @@ public class GameController {
     }
 
     public void restartLevel(int screenWidth) {
-        score = 0; lives = 3;
+        score = 0; lives = 3 + bonusLives;
         int currentHeight = (int)(paddle.getY() / 0.8);
         level.initBricks(screenWidth, currentHeight);
         resetBallAndPaddle(screenWidth, currentHeight);
@@ -199,11 +280,10 @@ public class GameController {
     }
 
     public void endSession() {
-        if (score > 0 || lives < 3) {
+        if (score >= 50) {
             scoreDAO.gameOver(currentPlayerId, score);
-            playerDAO.addCoins(currentPlayerId, 50);
-            score = 0; 
         }
+        score = 0; 
     }
 
     private void checkBallOut(int screenWidth, int screenHeight) {
@@ -221,7 +301,10 @@ public class GameController {
         if (balls.isEmpty()) {
             lives--;
             if (lives > 0) {
-                Ball newBall = new Ball(paddle.getX() + paddle.getWidth()/2, paddle.getY() - 20, 12, 5.0);
+                int baseBallSize = Math.max(8, (int)(screenWidth * 0.015));
+                int ballSize = (int)(baseBallSize * ballSizeMultiplier);
+                double ballSpeed = 5.0 * ballSpeedMultiplier;
+                Ball newBall = new Ball(paddle.getX() + paddle.getWidth()/2, paddle.getY() - 20, ballSize, ballSpeed);
                 newBall.setDirection(90);
                 balls.add(newBall);
             } else {
@@ -263,8 +346,9 @@ public class GameController {
         if (paddle != null) {
             int newX = (int) (paddle.getX() * scaleX);
             int paddleW = screenWidth / 8 + bonusWidth;
+            int paddleH = Math.max(10, (int)(screenHeight * 0.025));
             paddle.setX(newX);
-            paddle.setSize(paddleW, 15);
+            paddle.setSize(paddleW, paddleH);
             paddle.setY((int)(screenHeight * 0.8));
             if (paddle.getX() < 0) paddle.setX(0);
             if (paddle.getX() + paddle.getWidth() > screenWidth) paddle.setX(screenWidth - paddle.getWidth());
@@ -290,10 +374,18 @@ public class GameController {
     private void applyPowerUp(PowerUp p, int screenWidth) {
         switch (p.getType()) {
             case MULTIBALL:
-                if (!balls.isEmpty()) {
-                    Ball b = balls.get(0);
-                    Ball b1 = new Ball(b.getX(), b.getY(), b.getSize(), 5.0); b1.setDirection(120); balls.add(b1);
-                    Ball b2 = new Ball(b.getX(), b.getY(), b.getSize(), 5.0); b2.setDirection(60); balls.add(b2);
+                // NHÂN 3 SỐ BÓNG HIỆN TẠI
+                List<Ball> currentBalls = new java.util.ArrayList<>(balls);
+                for (Ball b : currentBalls) {
+                    // Tạo quả bóng mới thứ 1: nảy sang trái 30 độ so với hướng cũ
+                    Ball b1 = new Ball(b.getX(), b.getY(), b.getSize(), b.getSpeed());
+                    b1.setDirection(90 + 30); // Bay chéo trái
+                    balls.add(b1);
+                    
+                    // Tạo quả bóng mới thứ 2: nảy sang phải 30 độ so với hướng cũ
+                    Ball b2 = new Ball(b.getX(), b.getY(), b.getSize(), b.getSpeed());
+                    b2.setDirection(90 - 30); // Bay chéo phải
+                    balls.add(b2);
                 }
                 break;
             case EXPAND: paddle.expand(screenWidth); break;

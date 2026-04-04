@@ -5,12 +5,12 @@ import java.awt.event.KeyEvent;
 
 public class InputHandler implements KeyListener {
 
-    private boolean leftPressed;
-    private boolean rightPressed;
-    private boolean escapePressed;
-    private boolean onePressed;
-    private boolean twoPressed;
-    private boolean threePressed;
+    private volatile boolean leftPressed;
+    private volatile boolean rightPressed;
+    private volatile boolean escapePressed;
+    private volatile boolean onePressed;
+    private volatile boolean twoPressed;
+    private volatile boolean threePressed;
 
     public boolean isLeftPressed() { return leftPressed; }
     public boolean isRightPressed() { return rightPressed; }

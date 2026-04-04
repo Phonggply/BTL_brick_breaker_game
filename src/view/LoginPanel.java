@@ -77,13 +77,33 @@ public class LoginPanel extends JPanel {
     private void handleLogin() {
         String user = userField.getText();
         String pass = new String(passField.getPassword());
-        Player player = playerDAO.login(user, pass);
-        if (player != null) {
-            frame.setCurrentPlayer(player);
-            frame.showMenu();
-        } else {
-            JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
-        }
+        
+        // Vô hiệu hóa nút để tránh bấm nhiều lần
+        setButtonsEnabled(false);
+        
+        new SwingWorker<Player, Void>() {
+            @Override
+            protected Player doInBackground() throws Exception {
+                return playerDAO.login(user, pass);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Player player = get();
+                    if (player != null) {
+                        frame.setCurrentPlayer(player);
+                        frame.showMenu();
+                    } else {
+                        JOptionPane.showMessageDialog(LoginPanel.this, "Sai tài khoản hoặc mật khẩu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                        setButtonsEnabled(true);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    setButtonsEnabled(true);
+                }
+            }
+        }.execute();
     }
 
     private void handleRegister() {
@@ -93,11 +113,40 @@ public class LoginPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Tài khoản/Mật khẩu phải ít nhất 3 ký tự!");
             return;
         }
-        Player player = playerDAO.register(user, pass, "");
-        if (player != null) {
-            JOptionPane.showMessageDialog(this, "Đăng ký thành công!");
-        } else {
-            JOptionPane.showMessageDialog(this, "Tên tài khoản đã tồn tại!");
+        
+        setButtonsEnabled(false);
+        
+        new SwingWorker<Player, Void>() {
+            @Override
+            protected Player doInBackground() throws Exception {
+                return playerDAO.register(user, pass, "");
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Player player = get();
+                    if (player != null) {
+                        JOptionPane.showMessageDialog(LoginPanel.this, "Đăng ký thành công!");
+                    } else {
+                        JOptionPane.showMessageDialog(LoginPanel.this, "Tên tài khoản đã tồn tại hoặc lỗi server!");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                setButtonsEnabled(true);
+            }
+        }.execute();
+    }
+
+    private void setButtonsEnabled(boolean enabled) {
+        // Tìm và set các nút trong loginBox
+        for (Component c : getComponents()) {
+            if (c instanceof JPanel) {
+                for (Component subC : ((JPanel) c).getComponents()) {
+                    if (subC instanceof JButton) subC.setEnabled(enabled);
+                }
+            }
         }
     }
 

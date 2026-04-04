@@ -9,22 +9,16 @@ public class PurchaseDAO {
     
     public PurchaseDAO() {}
     
-    private Connection getConnection() {
-        return DBConnection.getConnection();
-    }
-    
     public List<Purchase> getPlayerPurchases(int playerId) {
         String sql = "SELECT * FROM PurchaseHistory WHERE PlayerId = ? ORDER BY PurchaseDate DESC";
         List<Purchase> purchases = new ArrayList<>();
-        Connection conn = getConnection();
-        if (conn == null) return purchases;
-        
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, playerId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Purchase p = new Purchase();
-                    p.setPurchaseId(rs.getInt("PurchaseId"));
+                    p.setPurchaseId(rs.getInt("HistoryId")); // Note: Check table column name
                     p.setPlayerId(rs.getInt("PlayerId"));
                     p.setItemId(rs.getInt("ItemId"));
                     p.setPricePaid(rs.getInt("PricePaid"));
@@ -36,9 +30,5 @@ public class PurchaseDAO {
             e.printStackTrace();
         }
         return purchases;
-    }
-    
-    public void close() {
-        DBConnection.closeConnection();
     }
 }

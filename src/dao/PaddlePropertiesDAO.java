@@ -7,19 +7,10 @@ public class PaddlePropertiesDAO {
     
     public PaddlePropertiesDAO() {}
     
-    private Connection getConnection() {
-        return DBConnection.getConnection();
-    }
-    
-    /**
-     * Lấy thuộc tính vợt của người chơi từ SQLite
-     */
     public PaddleProperties getPaddleProperties(int playerId) {
         String sql = "SELECT * FROM PaddleProperties WHERE PlayerId = ?";
-        Connection conn = getConnection();
-        if (conn == null) return null;
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, playerId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -34,9 +25,5 @@ public class PaddlePropertiesDAO {
             e.printStackTrace();
         }
         return null;
-    }
-    
-    public void close() {
-        DBConnection.closeConnection();
     }
 }
