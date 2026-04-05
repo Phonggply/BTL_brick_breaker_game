@@ -1,85 +1,69 @@
-USE [BrickBreakerGameDB]
-GO
-
 -- =====================================================
--- TRIGGER: Cập nhật thống kê khi có điểm mới
+-- Audit Log Table (MySQL)
 -- =====================================================
-CREATE OR ALTER TRIGGER [dbo].[trg_AfterInsertScore]
-ON [dbo].[Scores]
-AFTER INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    UPDATE gs
-    SET 
-        TotalScore = gs.TotalScore + i.Score,
-        HighestLevel = CASE 
-            WHEN (SELECT COUNT(*) FROM SaveGame sg WHERE sg.PlayerId = i.PlayerId) > 0 
-            THEN (SELECT MAX(Level) FROM SaveGame WHERE PlayerId = i.PlayerId)
-            ELSE gs.HighestLevel
-        END
-    FROM GameStats gs
-    INNER JOIN inserted i ON gs.PlayerId = i.PlayerId;
-END
-GO
-
--- =====================================================
--- TRIGGER: Kiểm tra số lượng tồn kho khi mua
--- =====================================================
-CREATE OR ALTER TRIGGER [dbo].[trg_BeforeInsertPurchase]
-ON [dbo].[PurchaseHistory]
-INSTEAD OF INSERT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    IF EXISTS (
-        SELECT 1 FROM inserted i
-        JOIN ShopItems si ON i.ItemId = si.ItemId
-        WHERE i.PricePaid < si.Price
-    )
-    BEGIN
-        RAISERROR('Giá thanh toán không hợp lệ', 16, 1);
-        RETURN;
-    END
-    
-    INSERT INTO PurchaseHistory (PlayerId, ItemId, PricePaid, PurchaseDate)
-    SELECT PlayerId, ItemId, PricePaid, PurchaseDate FROM inserted;
-END
-GO
-
--- =====================================================
--- TRIGGER: Audit log (ghi log thay đổi)
--- =====================================================
-CREATE TABLE [dbo].[AuditLog] (
-    LogId INT IDENTITY(1,1) PRIMARY KEY,
-    TableName NVARCHAR(100),
-    Action NVARCHAR(10),
+CREATE TABLE IF NOT EXISTS AuditLog (
+    LogId INT AUTO_INCREMENT PRIMARY KEY,
+    TableName VARCHAR(100),
+    Action VARCHAR(10),
     RecordId INT,
-    OldValue NVARCHAR(MAX),
-    NewValue NVARCHAR(MAX),
-    ChangedBy INT,
-    ChangedAt DATETIME DEFAULT GETDATE()
+    OldValue TEXT,
+    NewValue TEXT,
+    ChangedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-GO
 
-CREATE OR ALTER TRIGGER [dbo].[trg_AuditPlayers]
-ON [dbo].[Players]
-AFTER UPDATE
-AS
+-- =====================================================
+-- TRIGGERS (MySQL)
+-- =====================================================
+DELIMITER //
+
+-- Trigger: Cập nhật thống kê khi có điểm mới
+DROP TRIGGER IF EXISTS trg_AfterInsertScore //
+CREATE TRIGGER trg_AfterInsertScore
+AFTER INSERT ON Scores
+FOR EACH ROW
 BEGIN
-    SET NOCOUNT ON;
+    -- Cập nhật tổng điểm trong GameStats
+    UPDATE GameStats 
+    SET 
+        TotalScore = TotalScore + NEW.Score,
+        GamesPlayed = GamesPlayed + 1
+    WHERE PlayerId = NEW.PlayerId;
     
-    INSERT INTO AuditLog (TableName, Action, RecordId, OldValue, NewValue, ChangedBy)
-    SELECT 
+    -- Cập nhật HighestLevel nếu Level mới cao hơn
+    UPDATE GameStats
+    SET HighestLevel = NEW.LevelNumber
+    WHERE PlayerId = NEW.PlayerId AND HighestLevel < NEW.LevelNumber;
+END //
+
+-- Trigger: Kiểm tra giá trước khi mua (Thay thế INSTEAD OF)
+DROP TRIGGER IF EXISTS trg_BeforeInsertPurchase //
+CREATE TRIGGER trg_BeforeInsertPurchase
+BEFORE INSERT ON Purchases
+FOR EACH ROW
+BEGIN
+    DECLARE v_Price INT;
+    
+    SELECT Price INTO v_Price FROM ShopItems WHERE ItemId = NEW.ItemId;
+    
+    IF NEW.PricePaid < v_Price THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Giá thanh toán không hợp lệ';
+    END IF;
+END //
+
+-- Trigger: Audit log khi cập nhật thông tin người chơi
+DROP TRIGGER IF EXISTS trg_AuditPlayers //
+CREATE TRIGGER trg_AuditPlayers
+AFTER UPDATE ON Players
+FOR EACH ROW
+BEGIN
+    INSERT INTO AuditLog (TableName, Action, RecordId, OldValue, NewValue)
+    VALUES (
         'Players',
         'UPDATE',
-        d.PlayerId,
-        (SELECT * FROM deleted d2 WHERE d2.PlayerId = d.PlayerId FOR JSON AUTO),
-        (SELECT * FROM inserted i2 WHERE i2.PlayerId = i.PlayerId FOR JSON AUTO),
-        i.PlayerId
-    FROM inserted i
-    INNER JOIN deleted d ON i.PlayerId = d.PlayerId;
-END
-GO
+        OLD.PlayerId,
+        CONCAT('Coins: ', OLD.Coins, ', UserName: ', OLD.UserName),
+        CONCAT('Coins: ', NEW.Coins, ', UserName: ', NEW.UserName)
+    );
+END //
+
+DELIMITER ;

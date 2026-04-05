@@ -272,7 +272,8 @@ public class GameController {
     }
 
     public void restartLevel(int screenWidth) {
-        score = 0; lives = 3 + bonusLives;
+        score = 0; // RESET ĐIỂM Ở ĐÂY KHI CHƠI LẠI
+        lives = 3 + bonusLives;
         int currentHeight = (int)(paddle.getY() / 0.8);
         level.initBricks(screenWidth, currentHeight);
         resetBallAndPaddle(screenWidth, currentHeight);
@@ -280,10 +281,11 @@ public class GameController {
     }
 
     public void endSession() {
-        if (score >= 50) {
-            scoreDAO.gameOver(currentPlayerId, score);
+        if (score >= 10) { 
+            int currentLevel = levelManager.getCurrentLevelIndex() + 1;
+            scoreDAO.gameOver(currentPlayerId, score, currentLevel);
         }
-        score = 0; 
+        // KHÔNG RESET SCORE Ở ĐÂY ĐỂ GAME PANEL CÓ THỂ HIỂN THỊ ĐIỂM KẾT THÚC
     }
 
     private void checkBallOut(int screenWidth, int screenHeight) {
@@ -318,6 +320,11 @@ public class GameController {
         if (level != null && level.isLevelComplete()) {
             endSession();
             playerDAO.addCoins(currentPlayerId, 200);
+            
+            // TỰ ĐỘNG MỞ KHÓA MÀN TIẾP THEO KHI HOÀN THÀNH MÀN HIỆN TẠI
+            int currentLevelNumber = levelManager.getCurrentLevelIndex() + 1;
+            playerDAO.updateHighestLevel(currentPlayerId, currentLevelNumber + 1);
+            
             gameState = GameState.PAUSED; 
         }
     }
@@ -325,6 +332,7 @@ public class GameController {
     public void nextLevel(int screenWidth, int screenHeight) {
         if (levelManager.hasNextLevel()) {
             levelManager.nextLevel();
+            // Cập nhật HighestLevel khi bắt đầu màn tiếp theo (phòng hờ)
             playerDAO.updateHighestLevel(currentPlayerId, levelManager.getCurrentLevelIndex() + 1);
             level = levelManager.getCurrentLevel();
             if (level != null) level.initBricks(screenWidth, screenHeight);

@@ -1,41 +1,23 @@
-USE [BrickBreakerGameDB]
-GO
+-- =====================================================
+-- INDEXES (MySQL)
+-- =====================================================
 
 -- Index cho Scores
-CREATE NONCLUSTERED INDEX [IX_Scores_PlayerId_Score] 
-ON [dbo].[Scores] ([PlayerId], [Score] DESC)
-INCLUDE ([PlayedDate]);
-GO
+CREATE INDEX IX_Scores_PlayerId_Score ON Scores (PlayerId, Score DESC);
+CREATE INDEX IX_Scores_PlayedDate ON Scores (PlayedDate DESC);
 
-CREATE NONCLUSTERED INDEX [IX_Scores_PlayedDate] 
-ON [dbo].[Scores] ([PlayedDate] DESC);
-GO
+-- Index cho Purchases
+CREATE INDEX IX_Purchases_PlayerId ON Purchases (PlayerId, PurchaseDate DESC);
+CREATE INDEX IX_Purchases_ItemId ON Purchases (ItemId);
 
--- Index cho PurchaseHistory
-CREATE NONCLUSTERED INDEX [IX_PurchaseHistory_PlayerId] 
-ON [dbo].[PurchaseHistory] ([PlayerId], [PurchaseDate] DESC);
-GO
-
-CREATE NONCLUSTERED INDEX [IX_PurchaseHistory_ItemId] 
-ON [dbo].[PurchaseHistory] ([ItemId]);
-GO
-
--- Index cho UserInventory
-CREATE NONCLUSTERED INDEX [IX_UserInventory_PlayerId_IsEquipped] 
-ON [dbo].[UserInventory] ([PlayerId], [IsEquipped])
-INCLUDE ([ItemId], [Quantity]);
-GO
+-- Index cho Inventory
+CREATE INDEX IX_Inventory_PlayerId_IsEquipped ON Inventory (PlayerId, IsEquipped);
 
 -- Index cho SaveGame
-CREATE NONCLUSTERED INDEX [IX_SaveGame_PlayerId_SaveDate] 
-ON [dbo].[SaveGame] ([PlayerId], [SaveDate] DESC);
-GO
+CREATE INDEX IX_SaveGame_PlayerId_SaveDate ON SaveGame (PlayerId, SaveDate DESC);
 
 -- Index cho GameStats
-CREATE NONCLUSTERED INDEX [IX_GameStats_TotalScore] 
-ON [dbo].[GameStats] ([TotalScore] DESC)
-INCLUDE ([PlayerId], [GamesPlayed], [HighestLevel]);
-GO
+CREATE INDEX IX_GameStats_TotalScore ON GameStats (TotalScore DESC);
 
-PRINT 'Tạo indexes bổ sung thành công!';
-GO
+-- Thêm Index cho cột mới LevelNumber
+CREATE INDEX IX_Scores_LevelNumber ON Scores (LevelNumber);

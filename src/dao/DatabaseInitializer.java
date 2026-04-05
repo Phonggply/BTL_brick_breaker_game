@@ -9,7 +9,7 @@ public class DatabaseInitializer {
             if (conn != null) {
                 createTables(conn);
                 insertSampleData(conn);
-                System.out.println("Khởi tạo Database thành công!");
+                System.out.println("Database Initialized Successfully!");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -19,7 +19,7 @@ public class DatabaseInitializer {
     private static void createTables(Connection conn) throws SQLException {
         Statement stmt = conn.createStatement();
 
-        // 1. Players - Thêm Password
+        // 1. Players
         stmt.execute("CREATE TABLE IF NOT EXISTS Players (" +
                 "PlayerId INT AUTO_INCREMENT PRIMARY KEY, " +
                 "UserName VARCHAR(50) NOT NULL UNIQUE, " +
@@ -34,8 +34,17 @@ public class DatabaseInitializer {
                 "ScoreId INT AUTO_INCREMENT PRIMARY KEY, " +
                 "PlayerId INT, " +
                 "Score INT NOT NULL, " +
+                "LevelNumber INT DEFAULT 1, " +
                 "PlayedDate DATETIME DEFAULT CURRENT_TIMESTAMP, " +
                 "FOREIGN KEY(PlayerId) REFERENCES Players(PlayerId))");
+        
+        // Migration: Add LevelNumber column if not exists
+        try {
+            stmt.execute("ALTER TABLE Scores ADD COLUMN LevelNumber INT DEFAULT 1");
+            System.out.println("Column LevelNumber added to Scores table.");
+        } catch (SQLException e) {
+            // Column might already exist
+        }
 
         // 3. GameStats
         stmt.execute("CREATE TABLE IF NOT EXISTS GameStats (" +
@@ -110,22 +119,19 @@ public class DatabaseInitializer {
     }
 
     private static void insertSampleData(Connection conn) throws SQLException {
-        System.out.println("Cập nhật dữ liệu mẫu...");
-        // Dùng ON DUPLICATE KEY UPDATE cho MySQL
+        System.out.println("Updating sample data...");
         String sql = "INSERT INTO ShopItems (ItemId, ItemName, Description, Price, CurrencyType, ItemType, EffectType, EffectValue, ImagePath, IsActive) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1) " +
                      "ON DUPLICATE KEY UPDATE ItemName=VALUES(ItemName), Price=VALUES(Price), Description=VALUES(Description)";
         
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            // PowerUps (ID 1, 2, 3) - Giá 300 Coin
-            ps.setInt(1, 1); ps.setString(2, "Multi Ball"); ps.setString(3, "Thêm 2 quả bóng mới vào màn chơi"); ps.setInt(4, 300); ps.setString(5, "Coin"); ps.setString(6, "PowerUp"); ps.setString(7, "MULTIBALL"); ps.setInt(8, 1); ps.setString(9, "assets/multiball_powerup.png"); ps.addBatch();
-            ps.setInt(1, 2); ps.setString(2, "Expand Paddle"); ps.setString(3, "Tăng chiều rộng của thanh đỡ"); ps.setInt(4, 300); ps.setString(5, "Coin"); ps.setString(6, "PowerUp"); ps.setString(7, "EXPAND"); ps.setInt(8, 20); ps.setString(9, "assets/powerup_expand.png"); ps.addBatch();
-            ps.setInt(1, 3); ps.setString(2, "Shield"); ps.setString(3, "Kích hoạt lá chắn bảo vệ bóng"); ps.setInt(4, 300); ps.setString(5, "Coin"); ps.setString(6, "PowerUp"); ps.setString(7, "SHIELD"); ps.setInt(8, 20); ps.setString(9, "assets/powerup_shield.png"); ps.addBatch();
+            ps.setInt(1, 1); ps.setString(2, "Multi Ball"); ps.setString(3, "Add 2 balls"); ps.setInt(4, 300); ps.setString(5, "Coin"); ps.setString(6, "PowerUp"); ps.setString(7, "MULTIBALL"); ps.setInt(8, 1); ps.setString(9, "assets/multiball_powerup.png"); ps.addBatch();
+            ps.setInt(1, 2); ps.setString(2, "Expand Paddle"); ps.setString(3, "Increase paddle width"); ps.setInt(4, 300); ps.setString(5, "Coin"); ps.setString(6, "PowerUp"); ps.setString(7, "EXPAND"); ps.setInt(8, 20); ps.setString(9, "assets/powerup_expand.png"); ps.addBatch();
+            ps.setInt(1, 3); ps.setString(2, "Shield"); ps.setString(3, "Protect ball from falling"); ps.setInt(4, 300); ps.setString(5, "Coin"); ps.setString(6, "PowerUp"); ps.setString(7, "SHIELD"); ps.setInt(8, 20); ps.setString(9, "assets/powerup_shield.png"); ps.addBatch();
             
             ps.executeBatch();
         }
         
-        // Thêm tài khoản admin mặc định
         String sqlPlayer = "INSERT IGNORE INTO Players (PlayerId, UserName, Password, Email, Coins, Gems) VALUES (1, 'admin', 'admin123', 'admin@game.com', 5000, 100)";
         conn.createStatement().execute(sqlPlayer);
     }

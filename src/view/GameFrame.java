@@ -13,6 +13,7 @@ public class GameFrame extends JFrame {
     private Menu menuPanel;
     private GamePanel gamePanel;
     private LoginPanel loginPanel;
+    private LeaderboardPanel leaderboardPanel;
     private Player currentPlayer;
     private boolean isFullScreen = false;
     private GraphicsDevice graphicsDevice;
@@ -67,6 +68,15 @@ public class GameFrame extends JFrame {
         menuPanel.refreshPlayerData();
         cardLayout.show(mainPanel, "MENU");
         menuPanel.requestFocusInWindow();
+    }
+
+    public void showLeaderboard() {
+        if (leaderboardPanel == null) {
+            leaderboardPanel = new LeaderboardPanel(this);
+            mainPanel.add(leaderboardPanel, "LEADERBOARD");
+        }
+        leaderboardPanel.refreshLeaderboard();
+        cardLayout.show(mainPanel, "LEADERBOARD");
     }
 
     public void showGame() {
