@@ -9,48 +9,94 @@ public class ScoreDAO {
     
     public ScoreDAO() {}
     
-    public int gameOver(int playerId, int score) {
+    public List<Score> getLeaderboardByMaxScoreSum() throws SQLException {
+        String sql = "SELECT p.UserName, SUM(ms.MaxScore) as TotalPoint " +
+                     "FROM Players p " +
+                     "JOIN ( " +
+                     "    SELECT PlayerId, IFNULL(LevelNumber, 1) as Lvl, MAX(Score) as MaxScore " +
+                     "    FROM Scores " +
+                     "    GROUP BY PlayerId, Lvl " +
+                     ") ms ON p.PlayerId = ms.PlayerId " +
+                     "GROUP BY p.PlayerId, p.UserName " +
+                     "ORDER BY TotalPoint DESC";
+        
+        List<Score> leaderboard = new ArrayList<>();
+        System.out.println("--- FETCHING LEADERBOARD ---");
+        
+        Connection conn = DBConnection.getConnection();
+        if (conn == null) {
+            throw new SQLException("Cannot establish database connection (Connection is null)");
+        }
+        
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                Score item = new Score();
+                String name = rs.getString("UserName");
+                int total = rs.getInt("TotalPoint");
+                item.setUserName(name != null ? name : "UNKNOWN");
+                item.setScore(total);
+                leaderboard.add(item);
+                System.out.println(">> Found: " + name + " - " + total);
+            }
+        } catch (SQLException e) {
+            System.err.println("!!! SQL Error: " + e.getMessage());
+            throw e;
+        }
+        System.out.println("--- FINISHED: " + leaderboard.size() + " rows ---");
+        return leaderboard;
+    }
+
+    public int gameOver(int playerId, int score, int levelNumber) {
+        System.out.println("Saving score: PlayerID=" + playerId + ", Score=" + score + ", Level=" + levelNumber);
         try (Connection conn = DBConnection.getConnection()) {
-            if (conn == null) return 0;
+            if (conn == null) {
+                System.err.println("ERROR: Cannot connect to Database!");
+                javax.swing.JOptionPane.showMessageDialog(null, "ERROR: Cannot connect to Database!", "Connection Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                return 0;
+            }
             conn.setAutoCommit(false);
             
             try {
-                // 1. Chèn điểm mới
-                String sqlInsertScore = "INSERT INTO Scores (PlayerId, Score, PlayedDate) VALUES (?, ?, CURRENT_TIMESTAMP)";
+                // Try insert score
+                String sqlInsertScore = "INSERT INTO Scores (PlayerId, Score, LevelNumber, PlayedDate) VALUES (?, ?, ?, NOW())";
                 try (PreparedStatement ps = conn.prepareStatement(sqlInsertScore)) {
                     ps.setInt(1, playerId);
                     ps.setInt(2, score);
+                    ps.setInt(3, levelNumber);
                     ps.executeUpdate();
-                }
-                
-                // 2. Cập nhật thống kê
-                String sqlCheckStats = "SELECT 1 FROM GameStats WHERE PlayerId = ?";
-                boolean hasStats = false;
-                try (PreparedStatement ps = conn.prepareStatement(sqlCheckStats)) {
-                    ps.setInt(1, playerId);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        hasStats = rs.next();
+                    System.out.println("-> Saved to Scores table.");
+                } catch (SQLException e) {
+                    System.out.println("-> Warning: Error saving with LevelNumber, trying fallback: " + e.getMessage());
+                    String sqlFallback = "INSERT INTO Scores (PlayerId, Score, PlayedDate) VALUES (?, ?, NOW())";
+                    try (PreparedStatement psFallback = conn.prepareStatement(sqlFallback)) {
+                        psFallback.setInt(1, playerId);
+                        psFallback.setInt(2, score);
+                        psFallback.executeUpdate();
+                        System.out.println("-> Fallback save success.");
                     }
                 }
                 
-                if (hasStats) {
-                    String sqlUpdateStats = "UPDATE GameStats SET GamesPlayed = GamesPlayed + 1, TotalScore = TotalScore + ? WHERE PlayerId = ?";
-                    try (PreparedStatement ps = conn.prepareStatement(sqlUpdateStats)) {
-                        ps.setInt(1, score);
-                        ps.setInt(2, playerId);
-                        ps.executeUpdate();
-                    }
-                } else {
-                    String sqlInsertStats = "INSERT INTO GameStats (PlayerId, GamesPlayed, TotalScore, BricksBroken, HighestLevel) VALUES (?, 1, ?, 0, 1)";
-                    try (PreparedStatement ps = conn.prepareStatement(sqlInsertStats)) {
-                        ps.setInt(1, playerId);
-                        ps.setInt(2, score);
-                        ps.executeUpdate();
+                // Update stats
+                String sqlUpdateStats = "UPDATE GameStats SET GamesPlayed = GamesPlayed + 1, TotalScore = TotalScore + ?, HighestLevel = GREATEST(HighestLevel, ?) WHERE PlayerId = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sqlUpdateStats)) {
+                    ps.setInt(1, score);
+                    ps.setInt(2, levelNumber);
+                    ps.setInt(3, playerId);
+                    if (ps.executeUpdate() == 0) {
+                        String sqlInsertStats = "INSERT INTO GameStats (PlayerId, GamesPlayed, TotalScore, BricksBroken, HighestLevel) VALUES (?, 1, ?, 0, ?)";
+                        try (PreparedStatement psIns = conn.prepareStatement(sqlInsertStats)) {
+                            psIns.setInt(1, playerId);
+                            psIns.setInt(2, score);
+                            psIns.setInt(3, levelNumber);
+                            psIns.executeUpdate();
+                        }
                     }
                 }
                 
-                // 3. Cộng xu thưởng: score / 15
-                int coinReward = score / 15;
+                // Add coins
+                int coinReward = score / 10;
                 String sqlAddCoins = "UPDATE Players SET Coins = Coins + ? WHERE PlayerId = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sqlAddCoins)) {
                     ps.setInt(1, coinReward);
@@ -59,10 +105,13 @@ public class ScoreDAO {
                 }
                 
                 conn.commit();
+                System.out.println("===> ALL DATA COMMITTED TO DATABASE.");
                 return coinReward;
                 
             } catch (SQLException e) {
                 conn.rollback();
+                System.err.println("SQL ERROR: " + e.getMessage());
+                javax.swing.JOptionPane.showMessageDialog(null, "SCORE SAVE ERROR: " + e.getMessage(), "Database Error", javax.swing.JOptionPane.ERROR_MESSAGE);
                 e.printStackTrace();
             } finally {
                 conn.setAutoCommit(true);

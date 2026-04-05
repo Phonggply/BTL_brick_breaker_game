@@ -16,8 +16,11 @@ public class Menu extends JPanel {
     private JLabel gemsLabel;
     private JButton levelBtn;
     private JButton shopBtn;
+    private JButton rankBtn;
     private JButton startBtn;
     private JButton exitBtn;
+
+    private int highestLevel = 1;
 
     public Menu(GameFrame frame) {
         this.frame = frame;
@@ -69,6 +72,12 @@ public class Menu extends JPanel {
         styleButton(shopBtn, Color.PINK);
         add(shopBtn);
 
+        // ===== RANKING BUTTON =====
+        rankBtn = new JButton("RANKING");
+        rankBtn.setFont(buttonFont);
+        styleButton(rankBtn, Color.YELLOW);
+        add(rankBtn);
+
         // ===== EXIT BUTTON =====
         exitBtn = new JButton("EXIT");
         exitBtn.setFont(buttonFont);
@@ -84,9 +93,10 @@ public class Menu extends JPanel {
         });
 
         // ===== ACTIONS =====
-        startBtn.addActionListener(e -> frame.showGame());
+        startBtn.addActionListener(e -> frame.showGameAtLevel(highestLevel - 1));
         levelBtn.addActionListener(e -> frame.showLevelSelect());
         shopBtn.addActionListener(e -> frame.showShop());
+        rankBtn.addActionListener(e -> frame.showLeaderboard());
         exitBtn.addActionListener(e -> System.exit(0));
         
         // Cập nhật dữ liệu lần đầu
@@ -106,11 +116,13 @@ public class Menu extends JPanel {
         gemsLabel.setBounds(w - 200, 50, 180, 30);
 
         // Các nút ở giữa
-        int btnW = 250, btnH = 45, spacing = 15;
-        startBtn.setBounds(centerX - btnW/2, h/2 - 100, btnW, btnH);
-        levelBtn.setBounds(centerX - btnW/2, h/2 - 100 + (btnH + spacing), btnW, btnH);
-        shopBtn.setBounds(centerX - btnW/2, h/2 - 100 + (btnH + spacing) * 2, btnW, btnH);
-        exitBtn.setBounds(centerX - btnW/2, h/2 - 100 + (btnH + spacing) * 3, btnW, btnH);
+        int btnW = 250, btnH = 45, spacing = 10;
+        int startY = h/2 - 120;
+        startBtn.setBounds(centerX - btnW/2, startY, btnW, btnH);
+        levelBtn.setBounds(centerX - btnW/2, startY + (btnH + spacing), btnW, btnH);
+        shopBtn.setBounds(centerX - btnW/2, startY + (btnH + spacing) * 2, btnW, btnH);
+        rankBtn.setBounds(centerX - btnW/2, startY + (btnH + spacing) * 3, btnW, btnH);
+        exitBtn.setBounds(centerX - btnW/2, startY + (btnH + spacing) * 4, btnW, btnH);
     }
 
     public void refreshPlayerData() {

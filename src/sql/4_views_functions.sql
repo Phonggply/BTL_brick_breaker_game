@@ -1,19 +1,14 @@
-USE [BrickBreakerGameDB]
-GO
-
 -- =====================================================
--- VIEWS
+-- VIEWS (MySQL)
 -- =====================================================
 
 -- View: Thông tin chi tiết người chơi
-CREATE OR ALTER VIEW [dbo].[vw_PlayerDetails]
-AS
+DROP VIEW IF EXISTS vw_PlayerDetails;
+CREATE VIEW vw_PlayerDetails AS
 SELECT 
     p.PlayerId,
     p.UserName,
-    p.Email,
     p.Coins,
-    p.Gems,
     p.CreatedAt,
     gs.GamesPlayed,
     gs.TotalScore,
@@ -28,120 +23,114 @@ FROM Players p
 LEFT JOIN GameStats gs ON p.PlayerId = gs.PlayerId
 LEFT JOIN BallProperties bp ON p.PlayerId = bp.PlayerId
 LEFT JOIN PaddleProperties pp ON p.PlayerId = pp.PlayerId;
-GO
 
--- View: Top người chơi
-CREATE OR ALTER VIEW [dbo].[vw_TopPlayers]
-AS
-SELECT TOP 100
-    ROW_NUMBER() OVER (ORDER BY gs.TotalScore DESC) AS Rank,
-    p.UserName,
-    gs.TotalScore,
-    gs.HighestLevel,
-    gs.GamesPlayed,
-    (SELECT COUNT(*) FROM Scores s WHERE s.PlayerId = p.PlayerId AND s.Score > 10000) AS HighScoreCount
-FROM Players p
-JOIN GameStats gs ON p.PlayerId = gs.PlayerId
-WHERE gs.TotalScore > 0
-ORDER BY gs.TotalScore DESC;
-GO
+-- View: Top người chơi (Theo tổng điểm cao nhất mỗi màn)
+DROP VIEW IF EXISTS vw_TopPlayers;
+CREATE VIEW vw_TopPlayers AS
+SELECT 
+    p.UserName, 
+    SUM(ms.MaxScore) AS TotalPoint,
+    COUNT(ms.LevelNumber) AS LevelsCompleted
+FROM (
+    SELECT PlayerId, LevelNumber, MAX(Score) AS MaxScore
+    FROM Scores
+    GROUP BY PlayerId, LevelNumber
+) ms
+JOIN Players p ON ms.PlayerId = p.PlayerId
+GROUP BY p.PlayerId, p.UserName
+ORDER BY TotalPoint DESC;
 
 -- View: Shop items active
-CREATE OR ALTER VIEW [dbo].[vw_ShopItems]
-AS
+DROP VIEW IF EXISTS vw_ShopItems;
+CREATE VIEW vw_ShopItems AS
 SELECT 
     ItemId,
     ItemName,
     Description,
     Price,
-    CurrencyType,
-    ItemType,
+    Category,
     EffectType,
     EffectValue,
-    ImagePath,
     CASE 
-        WHEN ItemType = 'PowerUp' THEN 1
-        WHEN ItemType = 'Paddle' THEN 2
-        WHEN ItemType = 'Ball' THEN 3
-        ELSE 4
+        WHEN Category = 'PowerUp' THEN 1
+        WHEN Category = 'Width' THEN 2
+        WHEN Category = 'Paddle' THEN 3
+        WHEN Category = 'Ball' THEN 4
+        ELSE 5
     END AS SortOrder
-FROM ShopItems
-WHERE IsActive = 1;
-GO
+FROM ShopItems;
 
 -- =====================================================
--- FUNCTIONS
+-- FUNCTIONS (MySQL)
 -- =====================================================
+DELIMITER //
 
 -- Function: Tính phần trăm hoàn thành game
-CREATE OR ALTER FUNCTION [dbo].[fn_GetCompletionRate](@PlayerId INT)
-RETURNS FLOAT
-AS
+DROP FUNCTION IF EXISTS fn_GetCompletionRate //
+CREATE FUNCTION fn_GetCompletionRate(p_PlayerId INT) 
+RETURNS DOUBLE
+DETERMINISTIC
 BEGIN
-    DECLARE @Rate FLOAT;
+    DECLARE v_Rate DOUBLE DEFAULT 0;
     
-    SELECT @Rate = 
+    SELECT 
         CASE 
             WHEN GamesPlayed > 0 
-            THEN (CAST(TotalScore AS FLOAT) / (GamesPlayed * 10000)) * 100
+            THEN (CAST(TotalScore AS DOUBLE) / (GamesPlayed * 10000)) * 100
             ELSE 0 
-        END
+        END INTO v_Rate
     FROM GameStats
-    WHERE PlayerId = @PlayerId;
+    WHERE PlayerId = p_PlayerId;
     
-    RETURN ISNULL(@Rate, 0);
-END
-GO
+    RETURN COALESCE(v_Rate, 0);
+END //
 
 -- Function: Lấy rank của người chơi
-CREATE OR ALTER FUNCTION [dbo].[fn_GetPlayerRank](@PlayerId INT)
+DROP FUNCTION IF EXISTS fn_GetPlayerRank //
+CREATE FUNCTION fn_GetPlayerRank(p_PlayerId INT) 
 RETURNS INT
-AS
+DETERMINISTIC
 BEGIN
-    DECLARE @Rank INT;
+    DECLARE v_Rank INT DEFAULT 999999;
     
-    WITH RankedPlayers AS (
+    -- MySQL 8.0+ hỗ trợ Window Functions
+    SELECT `Rank` INTO v_Rank FROM (
         SELECT 
             PlayerId,
-            ROW_NUMBER() OVER (ORDER BY TotalScore DESC) AS Rank
+            ROW_NUMBER() OVER (ORDER BY TotalScore DESC) AS `Rank`
         FROM GameStats
         WHERE TotalScore > 0
-    )
-    SELECT @Rank = Rank
-    FROM RankedPlayers
-    WHERE PlayerId = @PlayerId;
+    ) r
+    WHERE PlayerId = p_PlayerId;
     
-    RETURN ISNULL(@Rank, 999999);
-END
-GO
+    RETURN COALESCE(v_Rank, 999999);
+END //
 
 -- Function: Kiểm tra có đủ tiền mua không
-CREATE OR ALTER FUNCTION [dbo].[fn_CanAfford](
-    @PlayerId INT,
-    @ItemId INT,
-    @Quantity INT
-)
-RETURNS BIT
-AS
+DROP FUNCTION IF EXISTS fn_CanAfford //
+CREATE FUNCTION fn_CanAfford(
+    p_PlayerId INT,
+    p_ItemId INT,
+    p_Quantity INT
+) 
+RETURNS TINYINT(1)
+DETERMINISTIC
 BEGIN
-    DECLARE @CanAfford BIT = 0;
-    DECLARE @Price INT, @CurrencyType NVARCHAR(10);
-    DECLARE @PlayerCoins INT, @PlayerGems INT;
-    DECLARE @TotalPrice INT;
+    DECLARE v_CanAfford TINYINT(1) DEFAULT 0;
+    DECLARE v_Price INT;
+    DECLARE v_PlayerCoins INT;
+    DECLARE v_TotalPrice INT;
     
-    SELECT @Price = Price, @CurrencyType = CurrencyType
-    FROM ShopItems WHERE ItemId = @ItemId;
+    SELECT Price INTO v_Price FROM ShopItems WHERE ItemId = p_ItemId;
+    SELECT Coins INTO v_PlayerCoins FROM Players WHERE PlayerId = p_PlayerId;
     
-    SELECT @PlayerCoins = Coins, @PlayerGems = Gems
-    FROM Players WHERE PlayerId = @PlayerId;
+    SET v_TotalPrice = v_Price * p_Quantity;
     
-    SET @TotalPrice = @Price * @Quantity;
+    IF v_PlayerCoins >= v_TotalPrice THEN
+        SET v_CanAfford = 1;
+    END IF;
     
-    IF @CurrencyType = 'Coin' AND @PlayerCoins >= @TotalPrice
-        SET @CanAfford = 1;
-    ELSE IF @CurrencyType = 'Gem' AND @PlayerGems >= @TotalPrice
-        SET @CanAfford = 1;
-    
-    RETURN @CanAfford;
-END
-GO
+    RETURN v_CanAfford;
+END //
+
+DELIMITER ;

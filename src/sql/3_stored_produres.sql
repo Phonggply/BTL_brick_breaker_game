@@ -1,192 +1,187 @@
-USE [BrickBreakerGameDB]
-GO
+-- =====================================================
+-- 12. THỐNG KÊ NGƯỜI CHƠI (MySQL)
+-- =====================================================
+DELIMITER //
 
--- =====================================================
--- 12. THỐNG KÊ NGƯỜI CHƠI
--- =====================================================
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetPlayerStats]
-    @PlayerId INT
-AS
+CREATE PROCEDURE sp_GetPlayerStats(IN p_PlayerId INT)
 BEGIN
     SELECT 
         p.UserName,
         p.Coins,
-        p.Gems,
         p.CreatedAt,
         gs.GamesPlayed,
         gs.TotalScore,
         gs.BricksBroken,
         gs.HighestLevel,
-        (SELECT COUNT(*) FROM Scores WHERE PlayerId = @PlayerId AND Score > 10000) AS HighScoreGames,
-        (SELECT AVG(Score) FROM Scores WHERE PlayerId = @PlayerId) AS AverageScore,
-        (SELECT TOP 1 Score FROM Scores WHERE PlayerId = @PlayerId ORDER BY Score DESC) AS PersonalBest
+        (SELECT COUNT(*) FROM Scores WHERE PlayerId = p_PlayerId AND Score > 10000) AS HighScoreGames,
+        (SELECT AVG(Score) FROM Scores WHERE PlayerId = p_PlayerId) AS AverageScore,
+        (SELECT MAX(Score) FROM Scores WHERE PlayerId = p_PlayerId) AS PersonalBest
     FROM Players p
     LEFT JOIN GameStats gs ON p.PlayerId = gs.PlayerId
-    WHERE p.PlayerId = @PlayerId;
-END
-GO
+    WHERE p.PlayerId = p_PlayerId;
+END //
 
 -- =====================================================
--- 13. BẢNG XẾP HẠNG
+-- 13. BẢNG XẾP HẠNG (MySQL - Cập nhật theo yêu cầu tổng điểm cao nhất mỗi màn)
 -- =====================================================
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetLeaderboard]
-    @TopCount INT = 10,
-    @SortBy NVARCHAR(20) = 'Score' -- Score, Games, Level
-AS
+CREATE PROCEDURE sp_GetLeaderboard(
+    IN p_TopCount INT,
+    IN p_SortBy VARCHAR(20)
+)
 BEGIN
-    IF @SortBy = 'Score'
-        SELECT TOP (@TopCount)
-            p.UserName,
-            gs.TotalScore,
-            gs.GamesPlayed,
-            gs.HighestLevel,
-            gs.BricksBroken,
-            (SELECT MAX(Score) FROM Scores WHERE PlayerId = p.PlayerId) AS BestScore
-        FROM Players p
-        JOIN GameStats gs ON p.PlayerId = gs.PlayerId
-        ORDER BY gs.TotalScore DESC;
+    IF p_SortBy = 'Score' THEN
+        -- Bảng xếp hạng theo TỔNG ĐIỂM CAO NHẤT CỦA MỖI LEVEL
+        SELECT 
+            p.UserName, 
+            SUM(ms.MaxScore) AS TotalPoint,
+            COUNT(ms.LevelNumber) AS LevelsCompleted
+        FROM (
+            SELECT PlayerId, LevelNumber, MAX(Score) AS MaxScore
+            FROM Scores
+            GROUP BY PlayerId, LevelNumber
+        ) ms
+        JOIN Players p ON ms.PlayerId = p.PlayerId
+        GROUP BY p.PlayerId, p.UserName
+        ORDER BY TotalPoint DESC
+        LIMIT p_TopCount;
     
-    ELSE IF @SortBy = 'Games'
-        SELECT TOP (@TopCount)
+    ELSEIF p_SortBy = 'Games' THEN
+        SELECT 
             p.UserName,
             gs.GamesPlayed,
             gs.TotalScore,
             gs.HighestLevel
         FROM Players p
         JOIN GameStats gs ON p.PlayerId = gs.PlayerId
-        ORDER BY gs.GamesPlayed DESC;
+        ORDER BY gs.GamesPlayed DESC
+        LIMIT p_TopCount;
     
-    ELSE IF @SortBy = 'Level'
-        SELECT TOP (@TopCount)
+    ELSEIF p_SortBy = 'Level' THEN
+        SELECT 
             p.UserName,
             gs.HighestLevel,
             gs.TotalScore,
             gs.GamesPlayed
         FROM Players p
         JOIN GameStats gs ON p.PlayerId = gs.PlayerId
-        ORDER BY gs.HighestLevel DESC;
-END
-GO
+        ORDER BY gs.HighestLevel DESC
+        LIMIT p_TopCount;
+    END IF;
+END //
 
 -- =====================================================
 -- 14. SỬ DỤNG POWER-UP
 -- =====================================================
-CREATE OR ALTER PROCEDURE [dbo].[sp_UsePowerUp]
-    @PlayerId INT,
-    @InventoryId INT
-AS
+CREATE PROCEDURE sp_UsePowerUp(
+    IN p_PlayerId INT,
+    IN p_InventoryId INT
+)
 BEGIN
-    BEGIN TRANSACTION;
+    DECLARE v_ItemId INT;
+    DECLARE v_Quantity INT;
+    DECLARE v_EffectType VARCHAR(50);
+    DECLARE v_EffectValue INT;
     
-    DECLARE @ItemId INT, @Quantity INT, @EffectType NVARCHAR(50), @EffectValue INT;
+    START TRANSACTION;
     
     -- Lấy thông tin item
-    SELECT @ItemId = ItemId, @Quantity = Quantity 
-    FROM UserInventory WHERE InventoryId = @InventoryId AND PlayerId = @PlayerId;
+    SELECT ItemId, Quantity INTO v_ItemId, v_Quantity 
+    FROM Inventory WHERE InventoryId = p_InventoryId AND PlayerId = p_PlayerId;
     
-    IF @Quantity <= 0
-    BEGIN
+    IF v_Quantity IS NULL OR v_Quantity <= 0 THEN
         ROLLBACK;
         SELECT 'Không đủ số lượng' AS Message;
-        RETURN;
-    END
-    
-    SELECT @EffectType = EffectType, @EffectValue = EffectValue 
-    FROM ShopItems WHERE ItemId = @ItemId;
-    
-    -- Giảm số lượng
-    UPDATE UserInventory SET Quantity = Quantity - 1 
-    WHERE InventoryId = @InventoryId;
-    
-    -- Xóa nếu hết
-    IF (SELECT Quantity FROM UserInventory WHERE InventoryId = @InventoryId) = 0
-        DELETE FROM UserInventory WHERE InventoryId = @InventoryId;
-    
-    -- Áp dụng hiệu ứng
-    IF @EffectType = 'BallCount'
-        UPDATE BallProperties SET BallCount = BallCount + @EffectValue 
-        WHERE PlayerId = @PlayerId;
-    
-    IF @EffectType = 'BallSpeed'
-        UPDATE BallProperties SET BallSpeed = BallSpeed * (1 + @EffectValue/100.0) 
-        WHERE PlayerId = @PlayerId;
-    
-    IF @EffectType = 'PaddleWidth'
-        UPDATE PaddleProperties SET PaddleWidth = PaddleWidth + @EffectValue 
-        WHERE PlayerId = @PlayerId;
-    
-    IF @EffectType = 'PaddleSpeed'
-        UPDATE PaddleProperties SET PaddleSpeed = PaddleSpeed + @EffectValue 
-        WHERE PlayerId = @PlayerId;
-    
-    COMMIT;
-    SELECT 'Sử dụng power-up thành công' AS Message;
-END
-GO
+    ELSE
+        SELECT EffectType, EffectValue INTO v_EffectType, v_EffectValue 
+        FROM ShopItems WHERE ItemId = v_ItemId;
+        
+        -- Giảm số lượng
+        UPDATE Inventory SET Quantity = Quantity - 1 
+        WHERE InventoryId = p_InventoryId;
+        
+        -- Xóa nếu hết
+        DELETE FROM Inventory WHERE InventoryId = p_InventoryId AND Quantity <= 0;
+        
+        -- Áp dụng hiệu ứng
+        IF v_EffectType = 'BallCount' THEN
+            UPDATE BallProperties SET BallCount = BallCount + v_EffectValue 
+            WHERE PlayerId = p_PlayerId;
+        ELSEIF v_EffectType = 'BallSpeed' THEN
+            UPDATE BallProperties SET BallSpeed = BallSpeed * (1 + v_EffectValue/100.0) 
+            WHERE PlayerId = p_PlayerId;
+        ELSEIF v_EffectType = 'PaddleWidth' THEN
+            UPDATE PaddleProperties SET PaddleWidth = PaddleWidth + v_EffectValue 
+            WHERE PlayerId = p_PlayerId;
+        ELSEIF v_EffectType = 'PaddleSpeed' THEN
+            UPDATE PaddleProperties SET PaddleSpeed = PaddleSpeed + v_EffectValue 
+            WHERE PlayerId = p_PlayerId;
+        END IF;
+        
+        COMMIT;
+        SELECT 'Sử dụng power-up thành công' AS Message;
+    END IF;
+END //
 
 -- =====================================================
 -- 15. TẠO NGƯỜI CHƠI MỚI
 -- =====================================================
-CREATE OR ALTER PROCEDURE [dbo].[sp_CreatePlayer]
-    @UserName NVARCHAR(50),
-    @Email NVARCHAR(100)
-AS
+CREATE PROCEDURE sp_CreatePlayer(
+    IN p_UserName VARCHAR(50),
+    IN p_Password VARCHAR(255)
+)
 BEGIN
-    BEGIN TRANSACTION;
+    DECLARE v_NewPlayerId INT;
+    
+    START TRANSACTION;
     
     -- Kiểm tra username đã tồn tại chưa
-    IF EXISTS (SELECT 1 FROM Players WHERE UserName = @UserName)
-    BEGIN
+    IF EXISTS (SELECT 1 FROM Players WHERE UserName = p_UserName) THEN
         ROLLBACK;
         SELECT 'Username đã tồn tại' AS Message;
-        RETURN;
-    END
-    
-    -- Tạo player mới
-    INSERT INTO Players (UserName, Email, Coins, Gems, CreatedAt)
-    VALUES (@UserName, @Email, 1000, 50, GETDATE());
-    
-    DECLARE @NewPlayerId INT = SCOPE_IDENTITY();
-    
-    -- Tạo thuộc tính mặc định
-    INSERT INTO BallProperties (PlayerId, BallSpeed, BallSize, BallCount)
-    VALUES (@NewPlayerId, 5.0, 1.0, 1);
-    
-    INSERT INTO PaddleProperties (PlayerId, PaddleWidth, PaddleSpeed)
-    VALUES (@NewPlayerId, 100.0, 10.0);
-    
-    -- Tạo thống kê
-    INSERT INTO GameStats (PlayerId, GamesPlayed, TotalScore, BricksBroken, HighestLevel)
-    VALUES (@NewPlayerId, 0, 0, 0, 1);
-    
-    COMMIT;
-    
-    SELECT @NewPlayerId AS PlayerId, 'Tạo tài khoản thành công' AS Message;
-END
-GO
+    ELSE
+        -- Tạo player mới
+        INSERT INTO Players (UserName, Password, Coins, CreatedAt)
+        VALUES (p_UserName, p_Password, 1000, NOW());
+        
+        SET v_NewPlayerId = LAST_INSERT_ID();
+        
+        -- Tạo thuộc tính mặc định
+        INSERT INTO BallProperties (PlayerId, BallSpeed, BallSize, BallCount)
+        VALUES (v_NewPlayerId, 5.0, 1.0, 1);
+        
+        INSERT INTO PaddleProperties (PlayerId, PaddleWidth, PaddleSpeed)
+        VALUES (v_NewPlayerId, 100.0, 10.0);
+        
+        -- Tạo thống kê
+        INSERT INTO GameStats (PlayerId, GamesPlayed, TotalScore, BricksBroken, HighestLevel)
+        VALUES (v_NewPlayerId, 0, 0, 0, 1);
+        
+        COMMIT;
+        SELECT v_NewPlayerId AS PlayerId, 'Tạo tài khoản thành công' AS Message;
+    END IF;
+END //
 
 -- =====================================================
 -- 16. XÓA NGƯỜI CHƠI
 -- =====================================================
-CREATE OR ALTER PROCEDURE [dbo].[sp_DeletePlayer]
-    @PlayerId INT
-AS
+CREATE PROCEDURE sp_DeletePlayer(IN p_PlayerId INT)
 BEGIN
-    BEGIN TRANSACTION;
+    START TRANSACTION;
     
-    -- Xóa dữ liệu liên quan
-    DELETE FROM BallProperties WHERE PlayerId = @PlayerId;
-    DELETE FROM PaddleProperties WHERE PlayerId = @PlayerId;
-    DELETE FROM GameStats WHERE PlayerId = @PlayerId;
-    DELETE FROM Scores WHERE PlayerId = @PlayerId;
-    DELETE FROM UserInventory WHERE PlayerId = @PlayerId;
-    DELETE FROM PurchaseHistory WHERE PlayerId = @PlayerId;
-    DELETE FROM SaveGame WHERE PlayerId = @PlayerId;
+    -- Xóa dữ liệu liên quan (Cascade đã thiết lập ở bảng, nhưng xóa thủ công cho chắc)
+    DELETE FROM BallProperties WHERE PlayerId = p_PlayerId;
+    DELETE FROM PaddleProperties WHERE PlayerId = p_PlayerId;
+    DELETE FROM GameStats WHERE PlayerId = p_PlayerId;
+    DELETE FROM Scores WHERE PlayerId = p_PlayerId;
+    DELETE FROM Inventory WHERE PlayerId = p_PlayerId;
+    DELETE FROM Purchases WHERE PlayerId = p_PlayerId;
+    DELETE FROM SaveGame WHERE PlayerId = p_PlayerId;
     
     -- Xóa player
-    DELETE FROM Players WHERE PlayerId = @PlayerId;
+    DELETE FROM Players WHERE PlayerId = p_PlayerId;
     
     COMMIT;
     SELECT 'Xóa người chơi thành công' AS Message;
-END
-GO
+END //
+
+DELIMITER ;

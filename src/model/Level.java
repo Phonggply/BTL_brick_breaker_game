@@ -13,8 +13,11 @@ public class Level {
     public void initBricks(int screenWidth, int screenHeight) {
         if (screenWidth <= 0 || screenHeight <= 0) return;
         int rows = originalData.length;
-        int cols = originalData[0].length;
-        bricks = new Brick[rows][cols];
+        int maxCols = 0;
+        for (int[] row : originalData) {
+            if (row.length > maxCols) maxCols = row.length;
+        }
+        bricks = new Brick[rows][maxCols];
         remainingBricks = 0;
 
         repositionBricks(screenWidth, screenHeight, true);
@@ -22,11 +25,15 @@ public class Level {
 
     public void repositionBricks(int screenWidth, int screenHeight, boolean isInitial) {
         int rows = originalData.length;
-        int cols = originalData[0].length;
+        int maxCols = 0;
+        for (int[] row : originalData) {
+            if (row.length > maxCols) maxCols = row.length;
+        }
+        if (maxCols == 0) return;
 
         // Tính toán chiều rộng gạch để lấp đầy khoảng 90% chiều rộng màn hình
         int availableWidth = (int) (screenWidth * 0.95);
-        int brickWidth = availableWidth / cols;
+        int brickWidth = availableWidth / maxCols;
         
         // Chiều cao gạch cố định theo tỉ lệ màn hình (khoảng 3%)
         int brickHeight = (int) (screenHeight * 0.035);
@@ -36,11 +43,12 @@ public class Level {
         int topOffset = (int) (screenHeight * 0.08);
         
         // Căn giữa khối gạch
-        int totalGridWidth = cols * brickWidth;
+        int totalGridWidth = maxCols * brickWidth;
         int offsetX = (screenWidth - totalGridWidth) / 2;
 
         for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
+            int colsInRow = originalData[r].length;
+            for (int c = 0; c < colsInRow; c++) {
                 int typeId = originalData[r][c];
                 if (typeId > 0) {
                     // Không cộng thêm spacing để các viên gạch nằm sát nhau
