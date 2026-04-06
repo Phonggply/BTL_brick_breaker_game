@@ -282,10 +282,14 @@ public class GameController {
 
     public void endSession() {
         if (score >= 10) { 
-            int currentLevel = levelManager.getCurrentLevelIndex() + 1;
-            scoreDAO.gameOver(currentPlayerId, score, currentLevel);
+            final int scoreToSave = score;
+            final int currentLevel = levelManager.getCurrentLevelIndex() + 1;
+            // Chạy lưu điểm ngầm để tránh lag game
+            new Thread(() -> {
+                scoreDAO.gameOver(currentPlayerId, scoreToSave, currentLevel);
+                System.out.println("DEBUG: Score saved in background thread.");
+            }).start();
         }
-        // KHÔNG RESET SCORE Ở ĐÂY ĐỂ GAME PANEL CÓ THỂ HIỂN THỊ ĐIỂM KẾT THÚC
     }
 
     private void checkBallOut(int screenWidth, int screenHeight) {
@@ -318,12 +322,20 @@ public class GameController {
 
     private void checkLevelComplete(int screenWidth, int screenHeight) {
         if (level != null && level.isLevelComplete()) {
-            endSession();
-            playerDAO.addCoins(currentPlayerId, 200);
+            final int scoreToSave = score;
+            final int currentLevelNumber = levelManager.getCurrentLevelIndex() + 1;
             
-            // TỰ ĐỘNG MỞ KHÓA MÀN TIẾP THEO KHI HOÀN THÀNH MÀN HIỆN TẠI
-            int currentLevelNumber = levelManager.getCurrentLevelIndex() + 1;
-            playerDAO.updateHighestLevel(currentPlayerId, currentLevelNumber + 1);
+            // Chỉ cần 1 lần lưu ngầm, hàm gameOver sẽ làm hết mọi việc:
+            // Lưu điểm -> Cộng xu -> Mở khóa Level mới.
+            new Thread(() -> {
+                try {
+                    // Hàm này đã bao gồm: INSERT score, UPDATE coin, UPDATE level trong 1 kết nối duy nhất
+                    scoreDAO.gameOver(currentPlayerId, scoreToSave, currentLevelNumber);
+                    System.out.println("DEBUG: Game completion data synchronized for Player " + currentPlayerId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
             
             gameState = GameState.PAUSED; 
         }
@@ -332,8 +344,12 @@ public class GameController {
     public void nextLevel(int screenWidth, int screenHeight) {
         if (levelManager.hasNextLevel()) {
             levelManager.nextLevel();
-            // Cập nhật HighestLevel khi bắt đầu màn tiếp theo (phòng hờ)
-            playerDAO.updateHighestLevel(currentPlayerId, levelManager.getCurrentLevelIndex() + 1);
+            final int nextLevelNumber = levelManager.getCurrentLevelIndex() + 1;
+            // Đảm bảo cập nhật level cao nhất mỗi khi qua màn
+            new Thread(() -> {
+                playerDAO.updateHighestLevel(currentPlayerId, nextLevelNumber);
+            }).start();
+            
             level = levelManager.getCurrentLevel();
             if (level != null) level.initBricks(screenWidth, screenHeight);
             resetBallAndPaddle(screenWidth, screenHeight);
@@ -382,15 +398,12 @@ public class GameController {
     private void applyPowerUp(PowerUp p, int screenWidth) {
         switch (p.getType()) {
             case MULTIBALL:
-                // NHÂN 3 SỐ BÓNG HIỆN TẠI
                 List<Ball> currentBalls = new java.util.ArrayList<>(balls);
                 for (Ball b : currentBalls) {
-                    // Tạo quả bóng mới thứ 1: nảy sang trái 30 độ so với hướng cũ
                     Ball b1 = new Ball(b.getX(), b.getY(), b.getSize(), b.getSpeed());
                     b1.setDirection(90 + 30); // Bay chéo trái
                     balls.add(b1);
                     
-                    // Tạo quả bóng mới thứ 2: nảy sang phải 30 độ so với hướng cũ
                     Ball b2 = new Ball(b.getX(), b.getY(), b.getSize(), b.getSpeed());
                     b2.setDirection(90 - 30); // Bay chéo phải
                     balls.add(b2);

@@ -34,7 +34,7 @@ public class LeaderboardPanel extends JPanel {
         title.setBorder(BorderFactory.createEmptyBorder(30, 0, 30, 0));
         add(title, BorderLayout.NORTH);
 
-        // ===== TABLE =====
+        // TABLE
         String[] columnNames = {"RANK", "PLAYER", "TOTAL SCORE"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -72,7 +72,7 @@ public class LeaderboardPanel extends JPanel {
         scrollPane.getViewport().setBackground(Color.BLACK);
         add(scrollPane, BorderLayout.CENTER);
 
-        // ===== BACK BUTTON =====
+        // BACK BUTTON 
         backBtn = new JButton("BACK TO MENU");
         backBtn.setFont(buttonFont);
         backBtn.setForeground(Color.WHITE);

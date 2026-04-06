@@ -85,7 +85,7 @@ public class ShopItemDAO {
                 return false;
             }
 
-            // MỚI: Kiểm tra giới hạn mua (chỉ cho mua tối đa 1 cái nếu chưa dùng)
+            // Kiểm tra giới hạn mua (chỉ cho mua tối đa 1 cái nếu chưa dùng)
             String sqlCheckOwned = "SELECT Quantity FROM UserInventory WHERE PlayerId = ? AND ItemId = ?";
             try (PreparedStatement ps = conn.prepareStatement(sqlCheckOwned)) {
                 ps.setInt(1, playerId);

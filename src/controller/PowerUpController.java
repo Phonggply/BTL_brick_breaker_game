@@ -22,7 +22,7 @@ public class PowerUpController {
             PowerUp.Type type = PowerUp.Type.EXPAND;
             
             if(r == 0) type = PowerUp.Type.EXPAND;
-            if(r == 1) type = PowerUp.Type.MULTIBALL; // Từ này phổ biến trong game, tôi giữ nguyên logic
+            if(r == 1) type = PowerUp.Type.MULTIBALL;
             if(r == 2) type = PowerUp.Type.SHIELD;
 
             powerUps.add(new PowerUp(x, y, type));

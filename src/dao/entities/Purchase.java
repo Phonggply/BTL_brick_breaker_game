@@ -8,9 +8,9 @@ public class Purchase {
     private int itemId;
     private int pricePaid;
     private Date purchaseDate;
-    private String itemName; // For display
+    private String itemName; 
     
-    // Getters and Setters
+
     public int getPurchaseId() { return purchaseId; }
     public void setPurchaseId(int purchaseId) { this.purchaseId = purchaseId; }
     public int getPlayerId() { return playerId; }

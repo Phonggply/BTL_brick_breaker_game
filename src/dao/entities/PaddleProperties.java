@@ -10,7 +10,6 @@ public class PaddleProperties {
         this.paddleSpeed = 10.0;
     }
     
-    // Getters and Setters
     public int getPlayerId() { return playerId; }
     public void setPlayerId(int playerId) { this.playerId = playerId; }
     public double getPaddleWidth() { return paddleWidth; }

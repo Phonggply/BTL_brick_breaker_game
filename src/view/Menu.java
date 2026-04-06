@@ -43,7 +43,7 @@ public class Menu extends JPanel {
         title.setHorizontalAlignment(JLabel.CENTER);
         add(title);
 
-        // ===== STATS (Coins & Gems) =====
+        // STATS (Coins & Gems)
         coinsLabel = new JLabel("COINS: 0");
         coinsLabel.setFont(statsFont);
         coinsLabel.setForeground(Color.YELLOW);
@@ -54,31 +54,31 @@ public class Menu extends JPanel {
         gemsLabel.setForeground(Color.CYAN);
         add(gemsLabel);
 
-        // ===== START BUTTON =====
+        // START BUTTON 
         startBtn = new JButton("START GAME");
         startBtn.setFont(buttonFont);
         styleButton(startBtn, Color.GREEN);
         add(startBtn);
 
-        // ===== LEVEL BUTTON =====
+        // LEVEL BUTTON 
         levelBtn = new JButton("LEVEL: 1");
         levelBtn.setFont(buttonFont);
         styleButton(levelBtn, Color.ORANGE);
         add(levelBtn);
 
-        // ===== SHOP BUTTON =====
+        // SHOP BUTTON 
         shopBtn = new JButton("SHOP");
         shopBtn.setFont(buttonFont);
         styleButton(shopBtn, Color.PINK);
         add(shopBtn);
 
-        // ===== RANKING BUTTON =====
+        // RANKING BUTTON
         rankBtn = new JButton("RANKING");
         rankBtn.setFont(buttonFont);
         styleButton(rankBtn, Color.YELLOW);
         add(rankBtn);
 
-        // ===== EXIT BUTTON =====
+        // EXIT BUTTON 
         exitBtn = new JButton("EXIT");
         exitBtn.setFont(buttonFont);
         styleButton(exitBtn, Color.RED);
@@ -92,7 +92,7 @@ public class Menu extends JPanel {
             }
         });
 
-        // ===== ACTIONS =====
+        // ACTIONS 
         startBtn.addActionListener(e -> frame.showGameAtLevel(highestLevel - 1));
         levelBtn.addActionListener(e -> frame.showLevelSelect());
         shopBtn.addActionListener(e -> frame.showShop());
@@ -127,17 +127,13 @@ public class Menu extends JPanel {
 
     public void refreshPlayerData() {
         if (frame.getCurrentPlayer() == null) return;
-        int playerId = frame.getCurrentPlayer().getPlayerId();
+        final int playerId = frame.getCurrentPlayer().getPlayerId();
         
-        if (coinsLabel != null) coinsLabel.setText("COINS: ...");
-        if (gemsLabel != null) gemsLabel.setText("GEMS: ...");
-        if (levelBtn != null) levelBtn.setText("LEVEL: ...");
-
         new SwingWorker<int[], Void>() {
-            private int highestLevel;
+            private int hLevel;
             @Override
             protected int[] doInBackground() throws Exception {
-                highestLevel = playerDAO.getHighestLevel(playerId);
+                hLevel = playerDAO.getHighestLevel(playerId);
                 return playerDAO.checkBalance(playerId);
             }
 
@@ -145,9 +141,15 @@ public class Menu extends JPanel {
             protected void done() {
                 try {
                     int[] balance = get();
+                    // Cập nhật Caching trong bộ nhớ
+                    frame.getCurrentPlayer().setCoins(balance[0]);
+                    frame.getCurrentPlayer().setHighestLevel(hLevel);
+                    
+                    // Cập nhật UI
+                    highestLevel = hLevel;
                     if (coinsLabel != null) coinsLabel.setText("COINS: " + balance[0]);
                     if (gemsLabel != null) gemsLabel.setText("GEMS: " + balance[1]);
-                    if (levelBtn != null) levelBtn.setText("LEVEL: " + highestLevel);
+                    if (levelBtn != null) levelBtn.setText("LEVEL: " + hLevel);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

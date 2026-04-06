@@ -8,7 +8,7 @@ public class Score {
     private int score;
     private int levelNumber;
     private Date playedDate;
-    private String userName; // For display when joining
+    private String userName; 
     
     public Score() {}
     
@@ -19,7 +19,7 @@ public class Score {
         this.playedDate = new Date();
     }
     
-    // Getters and Setters
+
     public int getScoreId() { return scoreId; }
     public void setScoreId(int scoreId) { this.scoreId = scoreId; }
     public int getPlayerId() { return playerId; }
