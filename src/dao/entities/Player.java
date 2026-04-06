@@ -9,7 +9,11 @@ public class Player {
     private Date createdDate;
     private int coins;
     private int gems;
+    private int highestLevel = 1; // Mặc định là màn 1
     private Date createdAt;
+    
+    public int getHighestLevel() { return highestLevel; }
+    public void setHighestLevel(int highestLevel) { this.highestLevel = highestLevel; }
     
     public Player() {}
     

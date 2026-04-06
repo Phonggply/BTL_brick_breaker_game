@@ -127,17 +127,13 @@ public class Menu extends JPanel {
 
     public void refreshPlayerData() {
         if (frame.getCurrentPlayer() == null) return;
-        int playerId = frame.getCurrentPlayer().getPlayerId();
+        final int playerId = frame.getCurrentPlayer().getPlayerId();
         
-        if (coinsLabel != null) coinsLabel.setText("COINS: ...");
-        if (gemsLabel != null) gemsLabel.setText("GEMS: ...");
-        if (levelBtn != null) levelBtn.setText("LEVEL: ...");
-
         new SwingWorker<int[], Void>() {
-            private int highestLevel;
+            private int hLevel;
             @Override
             protected int[] doInBackground() throws Exception {
-                highestLevel = playerDAO.getHighestLevel(playerId);
+                hLevel = playerDAO.getHighestLevel(playerId);
                 return playerDAO.checkBalance(playerId);
             }
 
@@ -145,9 +141,15 @@ public class Menu extends JPanel {
             protected void done() {
                 try {
                     int[] balance = get();
+                    // Cập nhật Caching trong bộ nhớ
+                    frame.getCurrentPlayer().setCoins(balance[0]);
+                    frame.getCurrentPlayer().setHighestLevel(hLevel);
+                    
+                    // Cập nhật UI
+                    highestLevel = hLevel;
                     if (coinsLabel != null) coinsLabel.setText("COINS: " + balance[0]);
                     if (gemsLabel != null) gemsLabel.setText("GEMS: " + balance[1]);
-                    if (levelBtn != null) levelBtn.setText("LEVEL: " + highestLevel);
+                    if (levelBtn != null) levelBtn.setText("LEVEL: " + hLevel);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
