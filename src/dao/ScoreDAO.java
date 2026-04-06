@@ -59,7 +59,7 @@ public class ScoreDAO {
             conn.setAutoCommit(false);
             
             try {
-                // Try insert score
+                
                 String sqlInsertScore = "INSERT INTO Scores (PlayerId, Score, LevelNumber, PlayedDate) VALUES (?, ?, ?, NOW())";
                 try (PreparedStatement ps = conn.prepareStatement(sqlInsertScore)) {
                     ps.setInt(1, playerId);

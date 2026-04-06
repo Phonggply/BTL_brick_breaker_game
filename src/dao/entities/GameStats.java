@@ -8,7 +8,6 @@ public class GameStats {
     private int bricksBroken;
     private int highestLevel;
     
-    // Getters and Setters
     public int getStatsId() { return statsId; }
     public void setStatsId(int statsId) { this.statsId = statsId; }
     public int getPlayerId() { return playerId; }

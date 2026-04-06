@@ -10,13 +10,13 @@ public class Inventory {
     private boolean isEquipped;
     private Date purchasedAt;
     
-    // Additional fields for display
+
     private String itemName;
     private String itemType;
     private String effectType;
     private int effectValue;
     
-    // Getters and Setters
+
     public int getInventoryId() { return inventoryId; }
     public void setInventoryId(int inventoryId) { this.inventoryId = inventoryId; }
     public int getPlayerId() { return playerId; }

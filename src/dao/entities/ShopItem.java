@@ -5,14 +5,14 @@ public class ShopItem {
     private String itemName;
     private String description;
     private int price;
-    private String currencyType; // Coin or Gem
-    private String itemType; // PowerUp, Paddle, Ball
+    private String currencyType; 
+    private String itemType; 
     private String effectType;
     private int effectValue;
     private String imagePath;
     private boolean isActive;
     
-    // Getters and Setters
+
     public int getItemId() { return itemId; }
     public void setItemId(int itemId) { this.itemId = itemId; }
     public String getItemName() { return itemName; }

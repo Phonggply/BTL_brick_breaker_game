@@ -22,7 +22,7 @@ public class Player {
         this.createdAt = new Date();
     }
     
-    // Getters and Setters
+
     public int getPlayerId() { return playerId; }
     public void setPlayerId(int playerId) { this.playerId = playerId; }
     public String getUserName() { return userName; }

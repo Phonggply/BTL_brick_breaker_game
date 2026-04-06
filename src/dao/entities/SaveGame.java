@@ -16,7 +16,7 @@ public class SaveGame {
     private String gameState;
     private Date saveDate;
     
-    // Getters and Setters
+
     public int getSaveId() { return saveId; }
     public void setSaveId(int saveId) { this.saveId = saveId; }
     public int getPlayerId() { return playerId; }

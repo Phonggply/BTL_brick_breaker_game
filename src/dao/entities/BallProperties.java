@@ -12,7 +12,6 @@ public class BallProperties {
         this.ballCount = 1;
     }
     
-    // Getters and Setters
     public int getPlayerId() { return playerId; }
     public void setPlayerId(int playerId) { this.playerId = playerId; }
     public double getBallSpeed() { return ballSpeed; }

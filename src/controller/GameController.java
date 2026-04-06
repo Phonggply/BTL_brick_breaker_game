@@ -320,8 +320,6 @@ public class GameController {
         if (level != null && level.isLevelComplete()) {
             endSession();
             playerDAO.addCoins(currentPlayerId, 200);
-            
-            // TỰ ĐỘNG MỞ KHÓA MÀN TIẾP THEO KHI HOÀN THÀNH MÀN HIỆN TẠI
             int currentLevelNumber = levelManager.getCurrentLevelIndex() + 1;
             playerDAO.updateHighestLevel(currentPlayerId, currentLevelNumber + 1);
             
@@ -332,7 +330,6 @@ public class GameController {
     public void nextLevel(int screenWidth, int screenHeight) {
         if (levelManager.hasNextLevel()) {
             levelManager.nextLevel();
-            // Cập nhật HighestLevel khi bắt đầu màn tiếp theo (phòng hờ)
             playerDAO.updateHighestLevel(currentPlayerId, levelManager.getCurrentLevelIndex() + 1);
             level = levelManager.getCurrentLevel();
             if (level != null) level.initBricks(screenWidth, screenHeight);
@@ -382,15 +379,12 @@ public class GameController {
     private void applyPowerUp(PowerUp p, int screenWidth) {
         switch (p.getType()) {
             case MULTIBALL:
-                // NHÂN 3 SỐ BÓNG HIỆN TẠI
                 List<Ball> currentBalls = new java.util.ArrayList<>(balls);
                 for (Ball b : currentBalls) {
-                    // Tạo quả bóng mới thứ 1: nảy sang trái 30 độ so với hướng cũ
                     Ball b1 = new Ball(b.getX(), b.getY(), b.getSize(), b.getSpeed());
                     b1.setDirection(90 + 30); // Bay chéo trái
                     balls.add(b1);
                     
-                    // Tạo quả bóng mới thứ 2: nảy sang phải 30 độ so với hướng cũ
                     Ball b2 = new Ball(b.getX(), b.getY(), b.getSize(), b.getSpeed());
                     b2.setDirection(90 - 30); // Bay chéo phải
                     balls.add(b2);
